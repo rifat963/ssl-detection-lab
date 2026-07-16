@@ -1,0 +1,17 @@
+method: simclr
+image_roots:
+  - /kaggle/input/your-dataset/train/images
+output_dir: /kaggle/working/simclr_yolo26/ssl
+yolo_model: yolo26n.yaml
+epochs: 25
+batch_size: 32
+image_size: 224
+workers: 2
+learning_rate: 0.0003
+weight_decay: 0.0001
+grad_accum_steps: 1
+amp: true
+projection_dim: 128
+hidden_dim: 512
+temperature: 0.20
+

@@ -1,0 +1,39 @@
+method: ijepa
+image_roots:
+  - /kaggle/input/football-player-detection-yolov8/football_players_detection/football_players_detection/train/images
+output_dir: /kaggle/working/cse445_ijepa_yolo26/ssl
+
+# Use yolo26n.yaml for strict label-free pretraining.
+# Use yolo26n.pt for practical COCO warm-start + label-free domain adaptation.
+yolo_model: yolo26n.pt
+
+epochs: 25
+batch_size: 16
+image_size: 224
+workers: 2
+max_images: null
+seed: 42
+
+learning_rate: 0.0003
+min_learning_rate: 0.000003
+weight_decay: 0.0001
+warmup_epochs: 1
+grad_accum_steps: 2
+gradient_clip: 5.0
+amp: true
+
+projection_dim: 256
+hidden_dim: 1024
+momentum: 0.996
+final_momentum: 1.0
+mask_ratio: 0.60
+num_target_blocks: 4
+target_scale_min: 0.10
+target_scale_max: 0.25
+target_aspect_min: 0.75
+target_aspect_max: 1.50
+predictor_depth: 2
+predictor_heads: 4
+save_every: 1
+resume: null
+
