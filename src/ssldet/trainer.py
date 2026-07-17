@@ -66,7 +66,7 @@ def _write_history(path: Path, rows: list[dict]) -> None:
 
 
 def pretrain(config: PretrainConfig) -> PretrainResult:
-    """Pretrain a YOLO backbone with one of the five supported SSL objectives."""
+    """Pretrain a YOLO backbone with one of the supported SSL objectives."""
 
     config.validate()
     distributed = initialize_distributed()
@@ -79,7 +79,7 @@ def pretrain(config: PretrainConfig) -> PretrainResult:
 
     image_paths = discover_images(config.image_roots, config.max_images, config.seed)
     dataset = UnlabeledImageDataset(image_paths, build_transform(config))
-    if config.method in {"simclr", "byol", "moco"} and len(dataset) < 2:
+    if config.method in {"simclr", "byol", "moco", "dinov2"} and len(dataset) < 2:
         raise ValueError(f"{config.method} requires at least two images")
 
     sampler = None
@@ -146,7 +146,8 @@ def pretrain(config: PretrainConfig) -> PretrainResult:
     last_checkpoint = output_dir / "last_ssl.pt"
     best_checkpoint = output_dir / "best_ssl.pt"
     history_path = output_dir / "history.csv"
-    yolo_path = output_dir / f"{config.method}_pretrained_yolo26.pt"
+    source_stem = Path(config.yolo_model).stem
+    yolo_path = output_dir / f"{config.method}_pretrained_{source_stem}.pt"
     manifest_path = output_dir / "run_manifest.json"
 
     optimizer.zero_grad(set_to_none=True)

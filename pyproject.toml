@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ssl-detection-lab"
-version = "0.1.0"
-description = "Student-friendly self-supervised pretraining for Ultralytics YOLO backbones"
+version = "0.3.1"
+description = "SSL pretraining, comprehensive evaluation, and video analysis for Ultralytics models"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
@@ -26,7 +26,9 @@ dependencies = [
 dev = ["pytest>=7.4", "ruff>=0.5"]
 
 [project.scripts]
+ssldet = "ssldet.main_cli:main"
 ssldet-pretrain = "ssldet.cli:main"
+ssldet-models = "ssldet.main_cli:models_main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -34,4 +36,3 @@ where = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-

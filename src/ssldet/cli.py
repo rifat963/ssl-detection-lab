@@ -10,7 +10,9 @@ from .trainer import pretrain
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ssldet-pretrain",
-        description="Pretrain a YOLO backbone with SimCLR, BYOL, MoCo, MAE, or I-JEPA.",
+        description=(
+            "Pretrain a YOLO backbone with SimCLR, BYOL, MoCo, DINOv2, MAE, or I-JEPA."
+        ),
     )
     parser.add_argument("--config", required=True, help="Path to a YAML configuration file")
     return parser
@@ -24,4 +26,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

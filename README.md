@@ -1,12 +1,228 @@
 # SSL Detection Lab
 
 A small, student-friendly PyTorch package for pretraining Ultralytics YOLO backbones with
-**SimCLR, BYOL, MoCo, MAE, or I-JEPA**, then transferring the learned backbone directly into an
-object detector.
+**SimCLR, BYOL, MoCo, DINOv2, MAE, or I-JEPA**, transferring the learned backbone into an object
+detector, evaluating it on labelled data, and analysing local or linked videos.
 
 The package was designed for CSE445 Computer Vision labs and Kaggle runtimes. Large training
 loops live in normal Python modules; notebooks contain configuration, method calls, plots,
 evaluation, and interpretation.
+
+## Kaggle football tutorial
+
+The student-oriented
+[`ssl_detection_lab_football_t4x2_tutorial.ipynb`](output/jupyter-notebook/ssl_detection_lab_football_t4x2_tutorial.ipynb)
+uses the `iasadpanwhar/football-player-detection-yolov8` dataset and a Kaggle T4 x2 runtime. It
+audits the YOLO labels, dry-runs every SSL method, probes every supported model family,
+fine-tunes one detector, exports labelled evaluation metrics, and exercises video analysis. The
+notebook installs the library from an attached source folder when available, otherwise from the
+project's GitHub repository. It contains no embedded wheel or generated Base64 package data.
+
+## Start here: supported models and SSL architectures
+
+Run this before starting an experiment:
+
+```bash
+ssldet models
+# or, for a UI/notebook
+ssldet models --json
+```
+
+### SSL architectures
+
+| Architecture | Type | Learning objective | Views | EMA/momentum target |
+|---|---|---|---:|---:|
+| SimCLR | Contrastive | NT-Xent cross-view agreement | 2 | No |
+| BYOL | Non-contrastive | Online-to-target latent prediction | 2 | Yes |
+| MoCo | Contrastive | Positive key and negative queue | 2 | Yes |
+| DINOv2 | Self-distillation | Multi-crop teacher/student agreement + KoLeo | 2+ | Yes |
+| MAE | Generative | Masked pixel reconstruction | 1 | No |
+| I-JEPA | Predictive | Masked latent-block prediction | 1 | Yes |
+
+### Model families
+
+| Family | Common scales | SSL pretraining | Labelled evaluation | Video analysis |
+|---|---|---:|---:|---:|
+| YOLO26 | n, s, m, l, x (+ P2/P6 YAML) | Yes | Yes | Yes |
+| YOLO12 | n, s, m, l, x | Yes | Yes | Yes |
+| YOLO11 | n, s, m, l, x | Yes | Yes | Yes |
+| YOLOv10 | n, s, m, b, l, x | Yes | Yes | Yes |
+| YOLOv9 | t, s, m, c, e | Yes | Yes | Yes |
+| YOLOv8 | n, s, m, l, x | Yes | Yes | Yes |
+| YOLOv6 | n, s, m, l, x | Yes | Yes | Yes |
+| YOLOv5u | n, s, m, l, x | Yes | Yes | Yes |
+| YOLOv3u | standard, SPP, tiny | Yes | Yes | Yes |
+| Custom Ultralytics YOLO | custom | Runtime checked | Yes | Yes |
+| RT-DETR | l, x | No | Yes | Yes |
+| YOLO-NAS | s, m, l | No | Yes | Yes |
+
+SSL compatibility requires an Ultralytics YAML-defined backbone ending in a spatial
+`B x C x H x W` feature map. Custom models are checked when the backbone adapter is created.
+YOLOv5 support means current Ultralytics-compatible **YOLOv5u** weights, not checkpoint files
+from the legacy YOLOv5 repository. Evaluation and video analysis support is intentionally wider
+than SSL pretraining support.
+
+The Python equivalent is:
+
+```python
+from ssldet import capabilities
+
+catalog = capabilities()
+print(catalog["model_families"])
+print(catalog["ssl_architectures"])
+print(catalog["dinov2_feature_backbones"])
+```
+
+For a small one-epoch pipeline check, the public workflow helpers keep notebook code short:
+
+```python
+from ssldet import launch_distributed_pretrain, make_dry_run_config
+
+config = make_dry_run_config(
+    method="dinov2",
+    train_images="/kaggle/input/.../train/images",
+    output_dir="/kaggle/working/runs/dinov2_yolo11n",
+    yolo_model="yolo11n.yaml",
+)
+result = launch_distributed_pretrain(config, num_processes=2)
+print(result.succeeded, result.output_dir)
+```
+
+Use `pretrain(config)` for a normal single-process Python run. The distributed helper saves the
+same validated configuration to YAML and launches one process per requested GPU.
+
+Official DINOv2 reference feature backbones are catalogued in S/14, B/14, L/14, and g/14
+sizes, each with and without register tokens. They are general-purpose ViT feature extractors,
+not standalone object detectors. A detection head is required before they can produce boxes or
+tracks in the video-analysis module.
+
+Load an official pretrained backbone for global embeddings or dense patch features:
+
+```python
+from ssldet import build_dinov2_transform, load_dinov2_backbone
+
+encoder = load_dinov2_backbone("dinov2_vitb14", device="cuda")
+preprocess = build_dinov2_transform(518)
+# images = torch.stack([preprocess(pil_image), ...]).to("cuda")
+global_embeddings = encoder(images)                    # B x 768
+patch_tokens = encoder.forward_tokens(images)          # B x N x 768
+feature_maps = encoder.forward_feature_map(images)     # B x 768 x H/14 x W/14
+```
+
+For offline loading, clone the official repository and provide a local checkpoint:
+
+```python
+encoder = load_dinov2_backbone(
+    "dinov2_vits14_reg",
+    repository="/path/to/dinov2",
+    source="local",
+    weights_file="/path/to/teacher_checkpoint.pth",
+)
+```
+
+The loader supports:
+
+| Model name | Architecture | Embedding | Registers |
+|---|---|---:|---:|
+| `dinov2_vits14` / `dinov2_vits14_reg` | ViT-S/14 | 384 | Optional |
+| `dinov2_vitb14` / `dinov2_vitb14_reg` | ViT-B/14 | 768 | Optional |
+| `dinov2_vitl14` / `dinov2_vitl14_reg` | ViT-L/14 | 1024 | Optional |
+| `dinov2_vitg14` / `dinov2_vitg14_reg` | ViT-g/14 | 1536 | Optional |
+
+The DINOv2 loss module itself accepts any PyTorch encoder returning a `B x C` representation.
+The packaged end-to-end pretraining pipeline currently supplies adapters for the YOLO model
+families in the table above. ResNet, ConvNeXt, EfficientNet, Swin, and other ViT families can
+use the loss module after providing a compatible pooled-feature adapter.
+
+## Analyse a video link
+
+Provide the video source, model name, and detector weight file:
+
+```bash
+ssldet video \
+  --source "https://youtu.be/LNwODJXcvt4" \
+  --model yolo26n \
+  --weights /path/to/best.pt \
+  --output runs/football-video
+```
+
+The source may be a local video, direct HTTP URL, RTSP stream, webcam index, or a video-service
+URL supported by the installed Ultralytics version. Use `--tracker bytetrack.yaml` to switch
+trackers, `--tracker none` for detection only, `--stride 2` to sample every second frame, or
+`--max-frames 500` for a bounded run.
+
+```python
+from ssldet import VideoAnalysisConfig, analyze_video
+
+outcome = analyze_video(
+    VideoAnalysisConfig(
+        video_source="https://example.com/match.mp4",
+        model_name="yolo26n",
+        weights_file="/path/to/best.pt",
+        output_dir="runs/football-video",
+        tracker="botsort.yaml",
+    )
+)
+print(outcome.outcome_markdown)
+print(outcome.report_json)
+```
+
+Every run produces:
+
+```text
+outcome.md          # readable headline and per-class outcome
+video_analysis.json # full aggregate report
+frames.csv          # counts, confidence, and latency for every frame
+detections.csv      # class, confidence, track ID, box, location, and occupancy
+<annotated video>   # detections and track IDs rendered by Ultralytics
+```
+
+Video-only metrics include frame coverage, class distribution, confidence distribution
+(min/max/mean/median/std/p5/p95/p99), detections per frame, normalized box occupancy, unique
+tracks, sampled track length, preprocess/inference/postprocess latency, model pipeline FPS, and
+end-to-end processing FPS.
+
+> A plain video has no ground truth. Precision, recall, F1, AP/mAP, confusion-matrix accuracy,
+> MOTA, MOTP, IDF1, and HOTA cannot be truthfully calculated from a video link alone. Label the
+> frames and use the evaluator below for detection accuracy. Tracking accuracy additionally
+> requires ground-truth object identities.
+
+The weight file passed to video analysis must be a **fine-tuned detector checkpoint** such as
+`best.pt`. `best_ssl.pt` contains training state and is not directly an object detector.
+
+## Comprehensive labelled evaluation
+
+```bash
+ssldet evaluate \
+  --model yolo26n \
+  --weights /path/to/best.pt \
+  --data /path/to/dataset.yaml \
+  --split test \
+  --output runs/football-evaluation
+```
+
+This retains every metric exposed by the installed Ultralytics validator: precision, recall,
+F1, TP/FP/FN, mAP50, mAP75, mAP50-95, per-class AP, per-image metrics, fitness, validation
+curves, confusion matrix, and preprocess/inference/postprocess timings. Task-specific box,
+segmentation, pose, and OBB metrics are captured when the selected model exposes them. Reports
+are written as `metrics.json`, `summary.csv`, `per_class_metrics.csv`,
+`per_image_metrics.csv`, and `confusion_matrix.csv`; Ultralytics plots are kept in the same
+directory.
+
+```python
+from ssldet import EvaluationConfig, evaluate
+
+report = evaluate(
+    EvaluationConfig(
+        model_name="yolo26n",
+        weights_file="/path/to/best.pt",
+        data="/path/to/dataset.yaml",
+        output_dir="runs/football-evaluation",
+        split="test",
+    )
+)
+print(report.metrics_json)
+```
 
 ## Why the I-JEPA implementation is compute-scaled
 
@@ -47,22 +263,42 @@ cd ssl-detection-lab
 pip install -e .
 ```
 
-## Five methods, one interface
+## Six methods, one interface
 
 | Method | Learning signal | Two augmented views? | Moving target? | YOLO adaptation |
 |---|---|---:|---:|---|
 | SimCLR | NT-Xent contrastive loss | Yes | No | Global pooled backbone features |
 | BYOL | Cross-view latent prediction | Yes | Yes | Online/EMA YOLO encoders |
 | MoCo | Positive key + negative queue | Yes | Yes | Momentum YOLO key encoder |
+| DINOv2 | Centered teacher/student cross-entropy + KoLeo | Multi-crop | Yes | EMA YOLO teacher |
 | MAE | Masked pixel reconstruction | No | No | Lightweight CNN decoder on YOLO features |
 | I-JEPA | Masked latent-block prediction | No | Yes | Transformer predictor over YOLO feature grid |
 
 The MAE implementation is also a documented CNN-compatible adaptation rather than an exact copy
 of the original ViT MAE architecture.
 
+### Why the DINOv2 implementation is compute-scaled
+
+Official DINOv2 trains ViT models with a large curated corpus and a combined DINO, iBOT, and
+KoLeo recipe. This package provides a **YOLO-native compute-scaled DINOv2-style adaptation**:
+
+1. Generate two global crops and configurable lower-resolution local crops.
+2. Process every crop with the trainable student YOLO backbone.
+3. Process only global crops with an exponential-moving-average teacher.
+4. Match centered, sharpened teacher distributions across different student views.
+5. Apply KoLeo nearest-neighbour entropy regularization to global features.
+6. Transfer the trained student backbone directly into the YOLO detector.
+
+It does not reproduce the official ViT patch-level iBOT objective or the LVD-142M training
+regime. Reports should call it **YOLO-native compute-scaled DINOv2-style pretraining**, not an
+official DINOv2 reproduction. See the
+[official DINOv2 repository](https://github.com/facebookresearch/dinov2) and
+[DINOv2 paper](https://arxiv.org/abs/2304.07193).
+
 ## Recommended dual-T4 Kaggle workflow
 
-Create a YAML file based on `examples/ijepa_t4x2.yaml`, then launch one process per GPU:
+Create a YAML file based on `examples/ijepa_t4x2.yaml` or
+`examples/dinov2_t4x2.yaml`, then launch one process per GPU:
 
 ```bash
 torchrun --standalone --nproc_per_node=2 \
@@ -88,7 +324,7 @@ best_ssl.pt                 # complete SSL state for analysis/resume
 last_ssl.pt                 # latest complete SSL state
 history.csv                 # epoch loss, learning rate, time, EMA momentum
 run_manifest.json           # reproducibility and initialization record
-ijepa_pretrained_yolo26.pt  # detector with the learned online backbone
+ijepa_pretrained_yolo26n.pt # detector with the learned online backbone
 ```
 
 ## Single-GPU Python API
@@ -116,7 +352,7 @@ Use the saved checkpoint with normal Ultralytics code:
 ```python
 from ultralytics import YOLO
 
-detector = YOLO("/kaggle/working/ijepa_yolo26/ssl/ijepa_pretrained_yolo26.pt")
+detector = YOLO("/kaggle/working/ijepa_yolo26/ssl/ijepa_pretrained_yolo26n.pt")
 detector.train(
     data="/kaggle/working/football_detection.yaml",
     epochs=60,
@@ -144,6 +380,16 @@ momentum: 0.996
 method: moco
 temperature: 0.20
 queue_size: 16384
+
+# DINOv2-style
+method: dinov2
+local_crops: 4
+local_crop_size: 96
+dino_output_dim: 4096
+student_temperature: 0.10
+teacher_temperature: 0.04
+center_momentum: 0.90
+koleo_weight: 0.10
 
 # MAE
 method: mae

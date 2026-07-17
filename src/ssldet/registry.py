@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 from .config import PretrainConfig
-from .methods import BYOL, IJEPA, MAE, MoCo, SimCLR
+from .methods import BYOL, DINOv2, IJEPA, MAE, MoCo, SimCLR
 
 
 @torch.no_grad()
@@ -51,6 +51,19 @@ def build_method(
             config.momentum,
             config.queue_size,
         )
+    elif config.method == "dinov2":
+        method = DINOv2(
+            encoder,
+            feature_dim,
+            config.hidden_dim,
+            config.projection_dim,
+            config.dino_output_dim,
+            config.student_temperature,
+            config.teacher_temperature,
+            config.center_momentum,
+            config.momentum,
+            config.koleo_weight,
+        )
     elif config.method == "mae":
         method = MAE(encoder, feature_channels, config.mask_ratio)
     elif config.method == "ijepa":
@@ -69,4 +82,3 @@ def build_method(
         raise KeyError(config.method)
 
     return method.to(device)
-

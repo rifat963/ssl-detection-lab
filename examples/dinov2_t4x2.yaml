@@ -1,0 +1,28 @@
+method: dinov2
+image_roots:
+  - /kaggle/input/my-dataset/train/images
+output_dir: /kaggle/working/dinov2_yolo26/ssl
+yolo_model: yolo26n.yaml
+
+epochs: 25
+batch_size: 12
+image_size: 224
+local_crop_size: 96
+local_crops: 4
+workers: 2
+grad_accum_steps: 2
+amp: true
+
+learning_rate: 0.0003
+min_learning_rate: 0.000003
+weight_decay: 0.0001
+momentum: 0.996
+final_momentum: 1.0
+
+hidden_dim: 1024
+projection_dim: 256
+dino_output_dim: 4096
+student_temperature: 0.10
+teacher_temperature: 0.04
+center_momentum: 0.90
+koleo_weight: 0.10

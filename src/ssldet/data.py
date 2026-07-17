@@ -33,6 +33,20 @@ class TwoViews:
         return self.transform(image), self.transform(image)
 
 
+class MultiCropViews:
+    """Create two global crops and several lower-resolution local crops."""
+
+    def __init__(self, global_transform: Callable, local_transform: Callable, local_crops: int):
+        self.global_transform = global_transform
+        self.local_transform = local_transform
+        self.local_crops = local_crops
+
+    def __call__(self, image: Image.Image):
+        global_views = (self.global_transform(image), self.global_transform(image))
+        local_views = tuple(self.local_transform(image) for _ in range(self.local_crops))
+        return global_views + local_views
+
+
 def discover_images(roots: list[str], max_images: int | None, seed: int) -> list[Path]:
     paths: list[Path] = []
     for raw_root in roots:
@@ -70,17 +84,39 @@ def build_transform(config: PretrainConfig):
             normalize,
         ])
 
-    strong_view = transforms.Compose([
-        crop,
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomApply([
-            transforms.ColorJitter(0.35, 0.35, 0.35, 0.06),
-        ], p=0.8),
-        transforms.RandomGrayscale(p=0.10),
-        transforms.RandomApply([GaussianBlur()], p=0.50),
-        transforms.ToTensor(),
-        normalize,
-    ])
+    def strong_transform(resized_crop):
+        return transforms.Compose([
+            resized_crop,
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomApply([
+                transforms.ColorJitter(0.35, 0.35, 0.35, 0.06),
+            ], p=0.8),
+            transforms.RandomGrayscale(p=0.10),
+            transforms.RandomApply([GaussianBlur()], p=0.50),
+            transforms.ToTensor(),
+            normalize,
+        ])
+
+    if config.method == "dinov2":
+        global_crop = transforms.RandomResizedCrop(
+            config.image_size,
+            scale=(0.32, 1.0),
+            ratio=(0.75, 1.3333),
+            antialias=True,
+        )
+        local_crop = transforms.RandomResizedCrop(
+            config.local_crop_size,
+            scale=(0.05, 0.32),
+            ratio=(0.75, 1.3333),
+            antialias=True,
+        )
+        return MultiCropViews(
+            strong_transform(global_crop),
+            strong_transform(local_crop),
+            config.local_crops,
+        )
+
+    strong_view = strong_transform(crop)
     return TwoViews(strong_view)
 
 
@@ -99,4 +135,3 @@ class UnlabeledImageDataset(Dataset):
         with Image.open(path) as image:
             image = image.convert("RGB")
             return self.transform(image)
-

@@ -43,6 +43,14 @@ class PretrainConfig:
     final_momentum: float = 1.0
     queue_size: int = 16384
 
+    dino_output_dim: int = 4096
+    student_temperature: float = 0.10
+    teacher_temperature: float = 0.04
+    center_momentum: float = 0.90
+    koleo_weight: float = 0.10
+    local_crops: int = 4
+    local_crop_size: int = 96
+
     mask_ratio: float = 0.60
     num_target_blocks: int = 4
     target_scale_min: float = 0.10
@@ -56,7 +64,7 @@ class PretrainConfig:
     resume: str | None = None
 
     def validate(self) -> "PretrainConfig":
-        supported = {"simclr", "byol", "moco", "mae", "ijepa"}
+        supported = {"simclr", "byol", "moco", "dinov2", "mae", "ijepa"}
         self.method = self.method.lower().strip()
         if self.method not in supported:
             raise ValueError(f"method must be one of {sorted(supported)}, got {self.method!r}")
@@ -70,6 +78,15 @@ class PretrainConfig:
             raise ValueError("Require 0 < momentum <= final_momentum <= 1")
         if not 0.0 < self.mask_ratio < 1.0:
             raise ValueError("mask_ratio must be between 0 and 1")
+        if self.method == "dinov2":
+            if self.dino_output_dim < 2 or self.local_crops < 0:
+                raise ValueError("dino_output_dim must be >= 2 and local_crops must be >= 0")
+            if not 32 <= self.local_crop_size <= self.image_size:
+                raise ValueError("local_crop_size must be between 32 and image_size")
+            if not 0.0 < self.teacher_temperature < self.student_temperature:
+                raise ValueError("Require 0 < teacher_temperature < student_temperature")
+            if not 0.0 <= self.center_momentum < 1.0 or self.koleo_weight < 0.0:
+                raise ValueError("Invalid DINOv2 center_momentum or koleo_weight")
         if not 0.0 < self.target_scale_min <= self.target_scale_max < 1.0:
             raise ValueError("Invalid I-JEPA target scale interval")
         if self.predictor_heads < 1 or self.projection_dim % self.predictor_heads:

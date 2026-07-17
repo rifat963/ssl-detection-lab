@@ -2,7 +2,7 @@ from ssldet.config import PretrainConfig
 
 
 def test_all_supported_methods_validate():
-    for method in ["simclr", "byol", "moco", "mae", "ijepa"]:
+    for method in ["simclr", "byol", "moco", "dinov2", "mae", "ijepa"]:
         config = PretrainConfig(method=method, image_roots=["unused"])
         assert config.validate().method == method
 
@@ -15,4 +15,3 @@ def test_ijepa_projection_dimension_constraint():
         assert "divisible" in str(error)
     else:
         raise AssertionError("Invalid I-JEPA projection dimension was accepted")
-
