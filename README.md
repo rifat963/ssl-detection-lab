@@ -267,6 +267,31 @@ Tiny/Small/Base/Large backbones. Web weights use `weights_dataset="lvd1689m"`; s
 ViT-L/7B weights use `weights_dataset="sat493m"`. DINOv3 code and weights retain Meta's
 separate [DINOv3 License](https://github.com/facebookresearch/dinov3/blob/main/LICENSE.md).
 
+### DINOv3 ViT-B/16 to YOLO26 distillation
+
+The high-level module follows the LightlyTrain Distillation v3 workflow and requires the local
+teacher checkpoint. It does not silently replace missing or incompatible weights:
+
+```python
+from ssldet import DINOv3YOLOConfig, pretrain_dinov3_yolo26
+
+config = DINOv3YOLOConfig(
+    data="/kaggle/input/football-images",
+    teacher_weights=(
+        "/kaggle/input/datasets/mrifatrashid/dinov3-weigths/"
+        "dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth"
+    ),
+    output_dir="/kaggle/working/dinov3_yolo26_football",
+    epochs=100,
+    batch_size=32,
+)
+result = pretrain_dinov3_yolo26(config)
+print(result.yolo_checkpoint)
+```
+
+Install `lightly-train[ultralytics]>=0.16.2` before calling this workflow. The exported student is
+written to `exported_models/exported_last.pt` and can then be fine-tuned with Ultralytics.
+
 ## Reusable object-detection module
 
 The object-detection adapter isolates third-party model loading from evaluation and video

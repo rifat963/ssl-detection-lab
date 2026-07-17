@@ -4,7 +4,7 @@ image_roots:
 output_dir: /kaggle/working/dinov3_yolo26_football
 yolo_model: yolo26n.yaml
 epochs: 25
-batch_size: 8
+batch_size: 4
 image_size: 224
 workers: 2
 seed: 42
@@ -12,11 +12,11 @@ learning_rate: 0.0003
 min_learning_rate: 0.000003
 weight_decay: 0.0001
 warmup_epochs: 1
-grad_accum_steps: 2
+grad_accum_steps: 4
 gradient_clip: 5.0
 amp: true
-dinov3_model: dinov3_vits16
-dinov3_weights: /kaggle/input/dinov3-weights/dinov3_vits16_pretrain_lvd1689m.pth
+dinov3_model: dinov3_vitb16
+dinov3_weights: /kaggle/input/datasets/mrifatrashid/dinov3-weigths/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth
 dinov3_repository: facebookresearch/dinov3
 dinov3_source: github
 dinov3_global_weight: 1.0

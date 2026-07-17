@@ -22,6 +22,8 @@ __all__ = [
     "EvaluationConfig",
     "EvaluationResult",
     "DistributedPretrainResult",
+    "DINOv3YOLOConfig",
+    "DINOv3YOLOResult",
     "BackboneTransferResult",
     "PretrainConfig",
     "PretrainResult",
@@ -43,13 +45,34 @@ __all__ = [
     "load_detector",
     "make_dry_run_config",
     "pretrain",
+    "pretrain_dinov3_yolo26",
     "runtime_report",
     "transfer_ssl_backbone_to_yolo",
+    "validate_dinov3_yolo26_support",
 ]
-__version__ = "0.7.0"
+__version__ = "0.8.0"
 
 
 def __getattr__(name: str):
+    if name in {
+        "DINOv3YOLOConfig",
+        "DINOv3YOLOResult",
+        "pretrain_dinov3_yolo26",
+        "validate_dinov3_yolo26_support",
+    }:
+        from .dinov3 import (
+            DINOv3YOLOConfig,
+            DINOv3YOLOResult,
+            pretrain_dinov3_yolo26,
+            validate_dinov3_yolo26_support,
+        )
+
+        return {
+            "DINOv3YOLOConfig": DINOv3YOLOConfig,
+            "DINOv3YOLOResult": DINOv3YOLOResult,
+            "pretrain_dinov3_yolo26": pretrain_dinov3_yolo26,
+            "validate_dinov3_yolo26_support": validate_dinov3_yolo26_support,
+        }[name]
     if name in {"BackboneTransferResult", "transfer_ssl_backbone_to_yolo"}:
         from .downstream import BackboneTransferResult, transfer_ssl_backbone_to_yolo
 

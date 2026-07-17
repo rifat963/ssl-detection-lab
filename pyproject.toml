@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ssl-detection-lab"
-version = "0.7.0"
+version = "0.8.0"
 description = "SSL pretraining, comprehensive evaluation, and video analysis for Ultralytics models"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -26,6 +26,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8.3", "ruff>=0.12"]
 dinov3 = ["torch>=2.7.1"]
+dinov3-yolo = ["lightly-train[ultralytics]>=0.16.2"]
 
 [project.scripts]
 ssldet = "ssldet.main_cli:main"
