@@ -10,7 +10,7 @@ evaluation, and interpretation.
 
 ## Current runtime baseline
 
-Version 0.5 uses the current accelerator-neutral PyTorch APIs and the recommended torchvision
+Version 0.6 uses the current accelerator-neutral PyTorch APIs and the recommended torchvision
 transforms v2 pipeline. Its tested dependency floor is Python 3.10+, PyTorch 2.4+,
 torchvision 0.19+, and Ultralytics 8.4.96+. On managed GPU platforms, keep the platform's
 CUDA-matched PyTorch build and upgrade this package plus Ultralytics; do not blindly replace
@@ -28,6 +28,7 @@ ssldet.backbones    YOLO, DINOv2, and DINOv3 feature encoders
 ssldet.detection    backend-neutral detector protocol and Ultralytics adapter
 ssldet.evaluation   labelled object-detection evaluation and metric export
 ssldet.video        streaming detection/tracking and video metrics
+ssldet.downstream   verified SSL-checkpoint transfer into YOLO detectors
 ssldet.workflow     student-friendly dry-run and distributed-launch helpers
 ```
 
@@ -74,6 +75,24 @@ audits the YOLO labels, dry-runs every SSL method, probes every supported model 
 fine-tunes one detector, exports labelled evaluation metrics, and exercises video analysis. The
 notebook installs the library from an attached source folder when available, otherwise from the
 project's GitHub repository. It contains no embedded wheel or generated Base64 package data.
+
+For a focused training walkthrough, use
+[`simclr_football_t4x2_tutorial.ipynb`](output/jupyter-notebook/simclr_football_t4x2_tutorial.ipynb).
+It trains a YOLO backbone with SimCLR using image pixels only, plots the training history,
+extracts validation features, creates a labelled t-SNE visualization, and inspects cosine-nearest
+neighbors in the learned feature space.
+
+The matching
+[`byol_football_t4x2_tutorial.ipynb`](output/jupyter-notebook/byol_football_t4x2_tutorial.ipynb)
+explains the online and EMA target branches, demonstrates the reusable BYOL factory, trains with
+AMP and distributed T4 x2 execution, checks for feature variation, and visualizes the learned
+representation with t-SNE and cosine-nearest neighbors.
+
+The downstream
+[`simclr_yolo26_football_downstream_tutorial.ipynb`](output/jupyter-notebook/simclr_yolo26_football_downstream_tutorial.ipynb)
+transfers a SimCLR `best_ssl.pt` online encoder into YOLO26, verifies backbone-key coverage,
+warms up the randomly initialized detection head, fine-tunes the complete detector, exports
+labelled test metrics, and runs tracking and video analysis.
 
 ## Start here: supported models and SSL architectures
 

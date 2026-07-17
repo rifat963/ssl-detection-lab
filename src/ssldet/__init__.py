@@ -22,6 +22,7 @@ __all__ = [
     "EvaluationConfig",
     "EvaluationResult",
     "DistributedPretrainResult",
+    "BackboneTransferResult",
     "PretrainConfig",
     "PretrainResult",
     "VideoAnalysisConfig",
@@ -43,11 +44,19 @@ __all__ = [
     "make_dry_run_config",
     "pretrain",
     "runtime_report",
+    "transfer_ssl_backbone_to_yolo",
 ]
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 
 def __getattr__(name: str):
+    if name in {"BackboneTransferResult", "transfer_ssl_backbone_to_yolo"}:
+        from .downstream import BackboneTransferResult, transfer_ssl_backbone_to_yolo
+
+        return {
+            "BackboneTransferResult": BackboneTransferResult,
+            "transfer_ssl_backbone_to_yolo": transfer_ssl_backbone_to_yolo,
+        }[name]
     if name in {"available_ssl_modules", "create_ssl_module"}:
         from .ssl import available_ssl_modules, create_ssl_module
 
