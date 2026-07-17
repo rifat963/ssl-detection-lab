@@ -71,13 +71,13 @@ def build_transform(config: PretrainConfig):
     normalize = v2.Normalize(IMAGENET_MEAN, IMAGENET_STD)
     crop = v2.RandomResizedCrop(
         config.image_size,
-        scale=(0.50, 1.0) if config.method in {"mae", "ijepa"} else (0.30, 1.0),
+        scale=(0.50, 1.0) if config.method in {"mae", "ijepa", "dinov3"} else (0.30, 1.0),
         ratio=(0.75, 1.3333),
         antialias=True,
     )
 
-    if config.method in {"mae", "ijepa"}:
-        # A single view: I-JEPA does not need two hand-designed positive views.
+    if config.method in {"mae", "ijepa", "dinov3"}:
+        # Single-view objectives do not need hand-designed positive pairs.
         return v2.Compose([
             crop,
             v2.RandomHorizontalFlip(),

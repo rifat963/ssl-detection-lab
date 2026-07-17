@@ -86,6 +86,30 @@ class DINOv3FeatureEncoder(nn.Module):
             return features
         raise ValueError(f"Unsupported DINOv3 feature shape: {tuple(features.shape)}")
 
+    def forward_global_and_dense(
+        self,
+        images: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Return global and dense features from one teacher forward pass."""
+
+        features = self._raw_features(images)
+        if isinstance(features, dict):
+            global_features = features["x_norm_clstoken"]
+            tokens = features["x_norm_patchtokens"]
+            height = images.shape[-2] // self.spec.patch_size
+            width = images.shape[-1] // self.spec.patch_size
+            if tokens.shape[1] != height * width:
+                raise ValueError(
+                    f"Expected {height * width} patch tokens, received {tokens.shape[1]}"
+                )
+            dense_features = tokens.transpose(1, 2).reshape(
+                tokens.shape[0], self.spec.embedding_dim, height, width
+            )
+            return global_features, dense_features
+        if isinstance(features, torch.Tensor) and features.ndim == 4:
+            return features.mean(dim=(-2, -1)), features
+        raise TypeError("DINOv3 teacher must expose a token dictionary or dense feature map")
+
     def forward_tokens(self, images: torch.Tensor) -> torch.Tensor:
         """Return normalized ViT patch tokens with shape BxNxC."""
 

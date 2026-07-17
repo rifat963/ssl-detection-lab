@@ -31,6 +31,9 @@ def test_dinov3_vit_wrapper_exports_global_tokens_and_dense_features():
     assert encoder(images).shape == (2, 384)
     assert encoder.forward_tokens(images).shape == (2, 20, 384)
     assert encoder.forward_feature_map(images).shape == (2, 384, 4, 5)
+    global_features, dense_features = encoder.forward_global_and_dense(images)
+    assert global_features.shape == (2, 384)
+    assert dense_features.shape == (2, 384, 4, 5)
 
 
 def test_dinov3_loader_forwards_user_supplied_weights(monkeypatch, tmp_path):

@@ -1,7 +1,7 @@
 # SSL Detection Lab
 
 A small, student-friendly PyTorch package for pretraining Ultralytics YOLO backbones with
-**SimCLR, BYOL, MoCo, DINOv2, MAE, or I-JEPA**, transferring the learned backbone into an object
+**SimCLR, BYOL, MoCo, DINOv2, DINOv3-guided distillation, MAE, or I-JEPA**, transferring the learned backbone into an object
 detector, evaluating it on labelled data, and analysing local or linked videos.
 
 The package was designed for CSE445 Computer Vision labs and Kaggle runtimes. Large training
@@ -10,7 +10,7 @@ evaluation, and interpretation.
 
 ## Current runtime baseline
 
-Version 0.6 uses the current accelerator-neutral PyTorch APIs and the recommended torchvision
+Version 0.7 uses the current accelerator-neutral PyTorch APIs and the recommended torchvision
 transforms v2 pipeline. Its tested dependency floor is Python 3.10+, PyTorch 2.4+,
 torchvision 0.19+, and Ultralytics 8.4.96+. On managed GPU platforms, keep the platform's
 CUDA-matched PyTorch build and upgrade this package plus Ultralytics; do not blindly replace
@@ -71,7 +71,7 @@ assert_supported_runtime(require_cuda=True, minimum_gpus=2)
 The student-oriented
 [`ssl_detection_lab_football_t4x2_tutorial.ipynb`](output/jupyter-notebook/ssl_detection_lab_football_t4x2_tutorial.ipynb)
 uses the `iasadpanwhar/football-player-detection-yolov8` dataset and a Kaggle T4 x2 runtime. It
-audits the YOLO labels, dry-runs every SSL method, probes every supported model family,
+audits the YOLO labels, dry-runs every self-contained SSL method, probes every supported model family,
 fine-tunes one detector, exports labelled evaluation metrics, and exercises video analysis. The
 notebook installs the library from an attached source folder when available, otherwise from the
 project's GitHub repository. It contains no embedded wheel or generated Base64 package data.
@@ -94,6 +94,16 @@ transfers a SimCLR `best_ssl.pt` online encoder into YOLO26, verifies backbone-k
 warms up the randomly initialized detection head, fine-tunes the complete detector, exports
 labelled test metrics, and runs tracking and video analysis.
 
+Four focused tutorials cover the additional YOLO26 workflows:
+
+- [`ijepa_yolo26_football_ssl_tutorial.ipynb`](output/jupyter-notebook/ijepa_yolo26_football_ssl_tutorial.ipynb)
+- [`dinov3_yolo26_football_ssl_tutorial.ipynb`](output/jupyter-notebook/dinov3_yolo26_football_ssl_tutorial.ipynb)
+- [`ijepa_yolo26_downstream_tutorial.ipynb`](output/jupyter-notebook/ijepa_yolo26_downstream_tutorial.ipynb)
+- [`dinov3_yolo26_downstream_tutorial.ipynb`](output/jupyter-notebook/dinov3_yolo26_downstream_tutorial.ipynb)
+
+The DINOv3 SSL notebook performs label-free frozen-teacher feature distillation into YOLO26. It
+does not claim to reproduce the full official DINOv3 pretraining recipe.
+
 ## Start here: supported models and SSL architectures
 
 Run this before starting an experiment:
@@ -112,6 +122,7 @@ ssldet models --json
 | BYOL | Non-contrastive | Online-to-target latent prediction | 2 | Yes |
 | MoCo | Contrastive | Positive key and negative queue | 2 | Yes |
 | DINOv2 | Self-distillation | Multi-crop teacher/student agreement + KoLeo | 2+ | Yes |
+| DINOv3-guided | Foundation-model distillation | Frozen global and dense teacher feature regression | 1 | No |
 | MAE | Generative | Masked pixel reconstruction | 1 | No |
 | I-JEPA | Predictive | Masked latent-block prediction | 1 | Yes |
 
@@ -403,7 +414,7 @@ cd ssl-detection-lab
 pip install -e .
 ```
 
-## Six methods, one interface
+## Seven methods, one interface
 
 | Method | Learning signal | Two augmented views? | Moving target? | YOLO adaptation |
 |---|---|---:|---:|---|
@@ -411,6 +422,7 @@ pip install -e .
 | BYOL | Cross-view latent prediction | Yes | Yes | Online/EMA YOLO encoders |
 | MoCo | Positive key + negative queue | Yes | Yes | Momentum YOLO key encoder |
 | DINOv2 | Centered teacher/student cross-entropy + KoLeo | Multi-crop | Yes | EMA YOLO teacher |
+| DINOv3-guided | Frozen foundation-model regression | No | Frozen teacher | Global and dense YOLO feature projection |
 | MAE | Masked pixel reconstruction | No | No | Lightweight CNN decoder on YOLO features |
 | I-JEPA | Masked latent-block prediction | No | Yes | Transformer predictor over YOLO feature grid |
 

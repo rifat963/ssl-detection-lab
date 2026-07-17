@@ -247,11 +247,17 @@ def pretrain(config: PretrainConfig) -> PretrainResult:
             dist.barrier()
         if distributed.is_main:
             yolo.save(str(yolo_path))
-            initialization = (
-                "COCO-supervised warm start followed by label-free domain adaptation"
-                if config.yolo_model.endswith(".pt")
-                else "random initialization; strict label-free SSL pretraining"
-            )
+            if config.method == "dinov3":
+                initialization = (
+                    "YOLO student distilled without labels from a frozen pretrained "
+                    f"{config.dinov3_model} teacher"
+                )
+            elif config.yolo_model.endswith(".pt"):
+                initialization = (
+                    "COCO-supervised warm start followed by label-free domain adaptation"
+                )
+            else:
+                initialization = "random initialization; strict label-free SSL pretraining"
             manifest = {
                 "method": config.method,
                 "initialization": initialization,

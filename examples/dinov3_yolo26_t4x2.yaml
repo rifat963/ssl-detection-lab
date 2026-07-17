@@ -1,0 +1,24 @@
+method: dinov3
+image_roots:
+  - /kaggle/input/football-player-detection-yolov8/football_players_detection/football_players_detection/train/images
+output_dir: /kaggle/working/dinov3_yolo26_football
+yolo_model: yolo26n.yaml
+epochs: 25
+batch_size: 8
+image_size: 224
+workers: 2
+seed: 42
+learning_rate: 0.0003
+min_learning_rate: 0.000003
+weight_decay: 0.0001
+warmup_epochs: 1
+grad_accum_steps: 2
+gradient_clip: 5.0
+amp: true
+dinov3_model: dinov3_vits16
+dinov3_weights: /kaggle/input/dinov3-weights/dinov3_vits16_pretrain_lvd1689m.pth
+dinov3_repository: facebookresearch/dinov3
+dinov3_source: github
+dinov3_global_weight: 1.0
+dinov3_dense_weight: 1.0
+save_every: 1

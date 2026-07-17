@@ -35,6 +35,8 @@ def make_dry_run_config(
     batch_size: int = 4,
     workers: int = 2,
     seed: int = 42,
+    dinov3_weights: str | None = None,
+    dinov3_model: str = "dinov3_vits16",
 ) -> PretrainConfig:
     """Create a one-epoch, low-memory configuration for pipeline verification.
 
@@ -73,6 +75,8 @@ def make_dry_run_config(
         koleo_weight=0.10,
         local_crops=2,
         local_crop_size=min(64, image_size),
+        dinov3_model=dinov3_model,
+        dinov3_weights=dinov3_weights,
         mask_ratio=0.60,
         num_target_blocks=2,
         predictor_depth=1,
@@ -125,4 +129,3 @@ def launch_distributed_pretrain(
             f"Inspect the output above and configuration at {destination}."
         )
     return result
-

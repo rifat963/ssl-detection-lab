@@ -2,8 +2,9 @@ from ssldet.config import PretrainConfig
 
 
 def test_all_supported_methods_validate():
-    for method in ["simclr", "byol", "moco", "dinov2", "mae", "ijepa"]:
-        config = PretrainConfig(method=method, image_roots=["unused"])
+    for method in ["simclr", "byol", "moco", "dinov2", "dinov3", "mae", "ijepa"]:
+        values = {"dinov3_weights": "teacher.pth"} if method == "dinov3" else {}
+        config = PretrainConfig(method=method, image_roots=["unused"], **values)
         assert config.validate().method == method
 
 

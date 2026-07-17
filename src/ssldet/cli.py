@@ -11,7 +11,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ssldet-pretrain",
         description=(
-            "Pretrain a YOLO backbone with SimCLR, BYOL, MoCo, DINOv2, MAE, or I-JEPA."
+            "Pretrain a YOLO backbone with SimCLR, BYOL, MoCo, DINOv2, "
+            "DINOv3 guidance, MAE, or I-JEPA."
         ),
     )
     parser.add_argument("--config", required=True, help="Path to a YAML configuration file")

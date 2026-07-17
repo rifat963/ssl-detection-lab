@@ -23,6 +23,7 @@ def test_builtin_ssl_modules_are_publicly_registered():
     assert set(available_ssl_modules()) == {
         "byol",
         "dinov2",
+        "dinov3",
         "ijepa",
         "mae",
         "moco",

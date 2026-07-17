@@ -7,7 +7,7 @@ from typing import Any
 
 import torch.nn as nn
 
-from ..methods import BYOL, DINOv2, IJEPA, MAE, MoCo, SimCLR
+from ..methods import BYOL, DINOv2, DINOv3Distillation, IJEPA, MAE, MoCo, SimCLR
 from ..methods.common import SSLMethod
 
 
@@ -17,6 +17,7 @@ _SSL_MODULES: dict[str, SSLFactory] = {
     "byol": BYOL,
     "moco": MoCo,
     "dinov2": DINOv2,
+    "dinov3": DINOv3Distillation,
     "mae": MAE,
     "ijepa": IJEPA,
 }

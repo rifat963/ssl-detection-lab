@@ -64,6 +64,13 @@ SSL_ARCHITECTURES = (
         2,
         True,
     ),
+    SSLArchitecture(
+        "dinov3",
+        "foundation-model distillation",
+        "frozen DINOv3 global and dense feature regression into a YOLO student",
+        1,
+        False,
+    ),
     SSLArchitecture("mae", "generative", "masked pixel reconstruction", 1, False),
     SSLArchitecture("ijepa", "predictive", "masked latent-block prediction", 1, True),
 )

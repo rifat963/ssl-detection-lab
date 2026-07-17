@@ -51,6 +51,13 @@ class PretrainConfig:
     local_crops: int = 4
     local_crop_size: int = 96
 
+    dinov3_model: str = "dinov3_vits16"
+    dinov3_weights: str | None = None
+    dinov3_repository: str = "facebookresearch/dinov3"
+    dinov3_source: str = "github"
+    dinov3_global_weight: float = 1.0
+    dinov3_dense_weight: float = 1.0
+
     mask_ratio: float = 0.60
     num_target_blocks: int = 4
     target_scale_min: float = 0.10
@@ -64,7 +71,7 @@ class PretrainConfig:
     resume: str | None = None
 
     def validate(self) -> "PretrainConfig":
-        supported = {"simclr", "byol", "moco", "dinov2", "mae", "ijepa"}
+        supported = {"simclr", "byol", "moco", "dinov2", "dinov3", "mae", "ijepa"}
         self.method = self.method.lower().strip()
         if self.method not in supported:
             raise ValueError(f"method must be one of {sorted(supported)}, got {self.method!r}")
@@ -87,6 +94,15 @@ class PretrainConfig:
                 raise ValueError("Require 0 < teacher_temperature < student_temperature")
             if not 0.0 <= self.center_momentum < 1.0 or self.koleo_weight < 0.0:
                 raise ValueError("Invalid DINOv2 center_momentum or koleo_weight")
+        if self.method == "dinov3":
+            if not self.dinov3_weights:
+                raise ValueError("dinov3_weights is required for frozen-teacher distillation")
+            if self.dinov3_source not in {"github", "local"}:
+                raise ValueError("dinov3_source must be 'github' or 'local'")
+            if self.dinov3_global_weight < 0.0 or self.dinov3_dense_weight < 0.0:
+                raise ValueError("DINOv3 loss weights must be non-negative")
+            if self.dinov3_global_weight + self.dinov3_dense_weight <= 0.0:
+                raise ValueError("At least one DINOv3 loss weight must be positive")
         if not 0.0 < self.target_scale_min <= self.target_scale_max < 1.0:
             raise ValueError("Invalid I-JEPA target scale interval")
         if self.predictor_heads < 1 or self.projection_dim % self.predictor_heads:

@@ -12,6 +12,7 @@ def test_catalog_lists_every_ssl_architecture():
         "byol",
         "moco",
         "dinov2",
+        "dinov3",
         "mae",
         "ijepa",
     }

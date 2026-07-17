@@ -46,7 +46,7 @@ __all__ = [
     "runtime_report",
     "transfer_ssl_backbone_to_yolo",
 ]
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 
 def __getattr__(name: str):

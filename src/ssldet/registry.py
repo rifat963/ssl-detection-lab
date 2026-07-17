@@ -3,6 +3,7 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 
+from .backbones import DINOV3_SPECS, load_dinov3_backbone
 from .config import PretrainConfig
 from .ssl import create_ssl_module
 
@@ -24,6 +25,28 @@ def build_method(
 ) -> nn.Module:
     feature_channels, _, _ = encoder.infer_dimensions(config.image_size, device)
     feature_dim = infer_pooled_dimension(encoder, config.image_size, device)
+
+    dinov3_teacher = None
+    dinov3_spec = DINOV3_SPECS.get(config.dinov3_model)
+    if config.method == "dinov3":
+        if dinov3_spec is None:
+            raise ValueError(
+                f"Unknown DINOv3 model {config.dinov3_model!r}; "
+                f"choose from {sorted(DINOV3_SPECS)}"
+            )
+        if config.image_size % dinov3_spec.patch_size:
+            raise ValueError(
+                f"image_size must be divisible by {dinov3_spec.patch_size} for "
+                f"{config.dinov3_model}"
+            )
+        dinov3_teacher = load_dinov3_backbone(
+            config.dinov3_model,
+            weights=config.dinov3_weights,
+            repository=config.dinov3_repository,
+            source=config.dinov3_source,
+            device=device,
+            freeze=True,
+        )
 
     arguments = {
         "simclr": {
@@ -56,6 +79,14 @@ def build_method(
             "center_momentum": config.center_momentum,
             "momentum": config.momentum,
             "koleo_weight": config.koleo_weight,
+        },
+        "dinov3": {
+            "teacher": dinov3_teacher,
+            "feature_channels": feature_channels,
+            "feature_dim": feature_dim,
+            "teacher_dim": dinov3_spec.embedding_dim if dinov3_spec else 0,
+            "global_weight": config.dinov3_global_weight,
+            "dense_weight": config.dinov3_dense_weight,
         },
         "mae": {
             "feature_channels": feature_channels,
