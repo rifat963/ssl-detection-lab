@@ -39,6 +39,18 @@ class FeatureBackbone:
     embedding_dim: int
     registers: bool
     object_detector: bool = False
+    pretrained_weights: bool = True
+    license_name: str = ""
+
+
+@dataclass(frozen=True)
+class DetectionBackend:
+    name: str
+    model_families: tuple[str, ...]
+    tasks: tuple[str, ...]
+    open_source_license: str
+    commercial_license_available: bool
+    license_url: str
 
 
 SSL_ARCHITECTURES = (
@@ -64,6 +76,7 @@ DINOV2_FEATURE_BACKBONES = tuple(
         14,
         embedding_dim,
         registers,
+        license_name="Apache-2.0",
     )
     for architecture, scale, embedding_dim in (
         ("vits14", "S", 384),
@@ -72,6 +85,56 @@ DINOV2_FEATURE_BACKBONES = tuple(
         ("vitg14", "g", 1536),
     )
     for registers in (False, True)
+)
+
+
+DINOV3_FEATURE_BACKBONES = tuple(
+    FeatureBackbone(
+        name,
+        architecture,
+        patch_size,
+        embedding_dim,
+        registers,
+        pretrained_weights=True,
+        license_name="DINOv3 License",
+    )
+    for name, architecture, patch_size, embedding_dim, registers in (
+        ("dinov3_vits16", "ViT-S/16", 16, 384, True),
+        ("dinov3_vits16plus", "ViT-S+/16", 16, 384, True),
+        ("dinov3_vitb16", "ViT-B/16", 16, 768, True),
+        ("dinov3_vitl16", "ViT-L/16", 16, 1024, True),
+        ("dinov3_vith16plus", "ViT-H+/16", 16, 1280, True),
+        ("dinov3_vit7b16", "ViT-7B/16", 16, 4096, True),
+        ("dinov3_convnext_tiny", "ConvNeXt Tiny", 32, 768, False),
+        ("dinov3_convnext_small", "ConvNeXt Small", 32, 768, False),
+        ("dinov3_convnext_base", "ConvNeXt Base", 32, 1024, False),
+        ("dinov3_convnext_large", "ConvNeXt Large", 32, 1536, False),
+    )
+)
+
+
+DETECTION_BACKENDS = (
+    DetectionBackend(
+        "Ultralytics",
+        (
+            "YOLO26",
+            "YOLO12",
+            "YOLO11",
+            "YOLOv10",
+            "YOLOv9",
+            "YOLOv8",
+            "YOLOv6",
+            "YOLOv5u",
+            "YOLOv3u",
+            "RT-DETR",
+            "YOLO-NAS",
+            "Custom Ultralytics YOLO",
+        ),
+        ("detect", "segment", "semantic", "pose", "obb", "classify", "track"),
+        "AGPL-3.0",
+        True,
+        "https://www.ultralytics.com/license",
+    ),
 )
 
 
@@ -216,4 +279,6 @@ def capabilities() -> dict[str, list[dict]]:
         "ssl_architectures": [asdict(item) for item in SSL_ARCHITECTURES],
         "model_families": [asdict(item) for item in MODEL_FAMILIES],
         "dinov2_feature_backbones": [asdict(item) for item in DINOV2_FEATURE_BACKBONES],
+        "dinov3_feature_backbones": [asdict(item) for item in DINOV3_FEATURE_BACKBONES],
+        "object_detection_backends": [asdict(item) for item in DETECTION_BACKENDS],
     }

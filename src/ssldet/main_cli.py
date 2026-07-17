@@ -35,11 +35,23 @@ def _catalog_text() -> str:
             f"- {item['name']:25} | {item['architecture']:9} | "
             f"dim {item['embedding_dim']:4} | {register_note}"
         )
+    lines.extend(["", "Official DINOv3 feature backbones", ""])
+    for item in catalog["dinov3_feature_backbones"]:
+        lines.append(
+            f"- {item['name']:25} | {item['architecture']:15} | "
+            f"dim {item['embedding_dim']:4} | user-supplied weights"
+        )
+    lines.extend(["", "Object-detection backends", ""])
+    for item in catalog["object_detection_backends"]:
+        commercial = "enterprise option available" if item["commercial_license_available"] else ""
+        lines.append(
+            f"- {item['name']:25} | {item['open_source_license']:10} | {commercial}"
+        )
     lines.extend(
         [
             "",
-            "DINOv2 feature backbones are not standalone detectors. Attach a detection head",
-            "or use the YOLO-native DINOv2 SSL method before video detection analysis.",
+            "DINOv2/DINOv3 feature backbones are not standalone detectors. Attach a",
+            "detection head or use a fine-tuned detector before video analysis.",
         ]
     )
     return "\n".join(lines)
@@ -69,6 +81,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     models = subparsers.add_parser("models", help="Show supported models and SSL architectures")
     models.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+
+    subparsers.add_parser("doctor", help="Show dependency, CUDA, and GPU compatibility")
 
     evaluate = subparsers.add_parser("evaluate", help="Evaluate weights on a labelled dataset")
     _add_common_model_arguments(evaluate)
@@ -114,6 +128,11 @@ def main() -> None:
     args = build_parser().parse_args()
     if args.command == "models":
         print(json.dumps(capabilities(), indent=2) if args.json else _catalog_text())
+        return
+    if args.command == "doctor":
+        from .runtime import runtime_report
+
+        print(json.dumps(runtime_report(), indent=2))
         return
 
     if args.command == "evaluate":

@@ -4,9 +4,10 @@ import random
 from pathlib import Path
 from typing import Callable
 
+import torch
 from PIL import Image, ImageFilter
 from torch.utils.data import Dataset
-from torchvision import transforms
+from torchvision.transforms import v2
 
 from .config import PretrainConfig
 
@@ -67,8 +68,8 @@ def discover_images(roots: list[str], max_images: int | None, seed: int) -> list
 
 
 def build_transform(config: PretrainConfig):
-    normalize = transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD)
-    crop = transforms.RandomResizedCrop(
+    normalize = v2.Normalize(IMAGENET_MEAN, IMAGENET_STD)
+    crop = v2.RandomResizedCrop(
         config.image_size,
         scale=(0.50, 1.0) if config.method in {"mae", "ijepa"} else (0.30, 1.0),
         ratio=(0.75, 1.3333),
@@ -77,34 +78,36 @@ def build_transform(config: PretrainConfig):
 
     if config.method in {"mae", "ijepa"}:
         # A single view: I-JEPA does not need two hand-designed positive views.
-        return transforms.Compose([
+        return v2.Compose([
             crop,
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
+            v2.RandomHorizontalFlip(),
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
             normalize,
         ])
 
     def strong_transform(resized_crop):
-        return transforms.Compose([
+        return v2.Compose([
             resized_crop,
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomApply([
-                transforms.ColorJitter(0.35, 0.35, 0.35, 0.06),
+            v2.RandomHorizontalFlip(),
+            v2.RandomApply([
+                v2.ColorJitter(0.35, 0.35, 0.35, 0.06),
             ], p=0.8),
-            transforms.RandomGrayscale(p=0.10),
-            transforms.RandomApply([GaussianBlur()], p=0.50),
-            transforms.ToTensor(),
+            v2.RandomGrayscale(p=0.10),
+            v2.RandomApply([GaussianBlur()], p=0.50),
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
             normalize,
         ])
 
     if config.method == "dinov2":
-        global_crop = transforms.RandomResizedCrop(
+        global_crop = v2.RandomResizedCrop(
             config.image_size,
             scale=(0.32, 1.0),
             ratio=(0.75, 1.3333),
             antialias=True,
         )
-        local_crop = transforms.RandomResizedCrop(
+        local_crop = v2.RandomResizedCrop(
             config.local_crop_size,
             scale=(0.05, 0.32),
             ratio=(0.75, 1.3333),

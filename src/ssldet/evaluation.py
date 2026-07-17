@@ -88,18 +88,9 @@ def _rows_to_csv(path: Path, rows: list[dict[str, Any]]) -> Path | None:
 
 
 def _load_model(model_name: str, weights_file: str):
-    family = resolve_model_family(model_name)
-    if family.name == "RT-DETR":
-        from ultralytics import RTDETR
+    from .detection import load_detector
 
-        return RTDETR(weights_file)
-    if family.name == "YOLO-NAS":
-        from ultralytics import NAS
-
-        return NAS(weights_file)
-    from ultralytics import YOLO
-
-    return YOLO(weights_file)
+    return load_detector(model_name, weights_file).model
 
 
 def _component_metrics(metrics: Any, names: dict[int, str]) -> tuple[dict, list[dict], list[dict]]:

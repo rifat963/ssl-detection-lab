@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 from .config import PretrainConfig
-from .methods import BYOL, DINOv2, IJEPA, MAE, MoCo, SimCLR
+from .ssl import create_ssl_module
 
 
 @torch.no_grad()
@@ -25,60 +25,57 @@ def build_method(
     feature_channels, _, _ = encoder.infer_dimensions(config.image_size, device)
     feature_dim = infer_pooled_dimension(encoder, config.image_size, device)
 
-    if config.method == "simclr":
-        method = SimCLR(
-            encoder,
-            feature_dim,
-            config.hidden_dim,
-            config.projection_dim,
-            config.temperature,
-        )
-    elif config.method == "byol":
-        method = BYOL(
-            encoder,
-            feature_dim,
-            config.hidden_dim,
-            config.projection_dim,
-            config.momentum,
-        )
-    elif config.method == "moco":
-        method = MoCo(
-            encoder,
-            feature_dim,
-            config.hidden_dim,
-            config.projection_dim,
-            config.temperature,
-            config.momentum,
-            config.queue_size,
-        )
-    elif config.method == "dinov2":
-        method = DINOv2(
-            encoder,
-            feature_dim,
-            config.hidden_dim,
-            config.projection_dim,
-            config.dino_output_dim,
-            config.student_temperature,
-            config.teacher_temperature,
-            config.center_momentum,
-            config.momentum,
-            config.koleo_weight,
-        )
-    elif config.method == "mae":
-        method = MAE(encoder, feature_channels, config.mask_ratio)
-    elif config.method == "ijepa":
-        method = IJEPA(
-            encoder,
-            feature_channels,
-            config.projection_dim,
-            config.predictor_depth,
-            config.predictor_heads,
-            config.momentum,
-            config.num_target_blocks,
-            (config.target_scale_min, config.target_scale_max),
-            (config.target_aspect_min, config.target_aspect_max),
-        )
-    else:  # guarded by config validation
-        raise KeyError(config.method)
+    arguments = {
+        "simclr": {
+            "feature_dim": feature_dim,
+            "hidden_dim": config.hidden_dim,
+            "projection_dim": config.projection_dim,
+            "temperature": config.temperature,
+        },
+        "byol": {
+            "feature_dim": feature_dim,
+            "hidden_dim": config.hidden_dim,
+            "projection_dim": config.projection_dim,
+            "momentum": config.momentum,
+        },
+        "moco": {
+            "feature_dim": feature_dim,
+            "hidden_dim": config.hidden_dim,
+            "projection_dim": config.projection_dim,
+            "temperature": config.temperature,
+            "momentum": config.momentum,
+            "queue_size": config.queue_size,
+        },
+        "dinov2": {
+            "feature_dim": feature_dim,
+            "hidden_dim": config.hidden_dim,
+            "bottleneck_dim": config.projection_dim,
+            "output_dim": config.dino_output_dim,
+            "student_temperature": config.student_temperature,
+            "teacher_temperature": config.teacher_temperature,
+            "center_momentum": config.center_momentum,
+            "momentum": config.momentum,
+            "koleo_weight": config.koleo_weight,
+        },
+        "mae": {
+            "feature_channels": feature_channels,
+            "mask_ratio": config.mask_ratio,
+        },
+        "ijepa": {
+            "feature_channels": feature_channels,
+            "projection_dim": config.projection_dim,
+            "predictor_depth": config.predictor_depth,
+            "predictor_heads": config.predictor_heads,
+            "momentum": config.momentum,
+            "num_target_blocks": config.num_target_blocks,
+            "target_scale": (config.target_scale_min, config.target_scale_max),
+            "target_aspect": (config.target_aspect_min, config.target_aspect_max),
+        },
+    }
+    try:
+        method_arguments = arguments[config.method]
+    except KeyError as error:  # guarded by config validation
+        raise KeyError(config.method) from error
+    method = create_ssl_module(config.method, encoder, **method_arguments)
 
     return method.to(device)

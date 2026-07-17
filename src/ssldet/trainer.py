@@ -118,14 +118,14 @@ def pretrain(config: PretrainConfig) -> PretrainResult:
     total_optimizer_steps = config.epochs * steps_per_epoch
     scheduler = _make_scheduler(optimizer, config, total_optimizer_steps)
     use_amp = bool(config.amp and distributed.device.type == "cuda")
-    scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
+    scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
 
     start_epoch = 1
     global_step = 0
     best_loss = float("inf")
     history: list[dict] = []
     if config.resume:
-        state = torch.load(config.resume, map_location="cpu")
+        state = torch.load(config.resume, map_location="cpu", weights_only=True)
         method.load_state_dict(state["method"])
         optimizer.load_state_dict(state["optimizer"])
         scheduler.load_state_dict(state["scheduler"])
@@ -182,7 +182,10 @@ def pretrain(config: PretrainConfig) -> PretrainResult:
                 )
                 method.set_momentum(momentum)
                 with sync_context:
-                    with torch.cuda.amp.autocast(enabled=use_amp):
+                    with torch.amp.autocast(
+                        device_type=distributed.device.type,
+                        enabled=use_amp,
+                    ):
                         loss = train_model(batch) / config.grad_accum_steps
                     if not torch.isfinite(loss):
                         raise FloatingPointError(f"Non-finite SSL loss: {float(loss.detach())}")

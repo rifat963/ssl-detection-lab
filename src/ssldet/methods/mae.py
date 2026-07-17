@@ -50,7 +50,9 @@ class MAE(SSLMethod):
         patch_mask = random_patch_mask(
             batch_size, grid_height, grid_width, self.mask_ratio, images.device
         )
-        pixel_mask = F.interpolate(patch_mask.float(), size=(image_height, image_width), mode="nearest")
+        pixel_mask = F.interpolate(
+            patch_mask.float(), size=(image_height, image_width), mode="nearest"
+        )
         masked_images = images.masked_fill(pixel_mask.bool(), 0.0)
         features = self.online_encoder.forward_feature_map(masked_images)
         reconstruction = self.decoder(features)
@@ -58,5 +60,5 @@ class MAE(SSLMethod):
             reconstruction, size=(image_height, image_width), mode="bilinear", align_corners=False
         )
         squared_error = (reconstruction - images).pow(2)
-        return (squared_error * pixel_mask).sum() / (pixel_mask.sum() * images.shape[1]).clamp_min(1.0)
-
+        masked_pixels = (pixel_mask.sum() * images.shape[1]).clamp_min(1.0)
+        return (squared_error * pixel_mask).sum() / masked_pixels

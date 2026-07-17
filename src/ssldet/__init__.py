@@ -5,14 +5,18 @@ displayed even before PyTorch and Ultralytics are installed.
 """
 
 from .catalog import (
+    DETECTION_BACKENDS,
     DINOV2_FEATURE_BACKBONES,
+    DINOV3_FEATURE_BACKBONES,
     MODEL_FAMILIES,
     SSL_ARCHITECTURES,
     capabilities,
 )
 
 __all__ = [
+    "DETECTION_BACKENDS",
     "DINOV2_FEATURE_BACKBONES",
+    "DINOV3_FEATURE_BACKBONES",
     "MODEL_FAMILIES",
     "SSL_ARCHITECTURES",
     "EvaluationConfig",
@@ -23,18 +27,49 @@ __all__ = [
     "VideoAnalysisConfig",
     "VideoAnalysisResult",
     "analyze_video",
+    "assert_supported_runtime",
+    "available_detection_backends",
+    "available_ssl_modules",
     "build_dinov2_transform",
+    "build_dinov3_transform",
     "capabilities",
+    "create_detector",
+    "create_ssl_module",
     "evaluate",
     "launch_distributed_pretrain",
     "load_dinov2_backbone",
+    "load_dinov3_backbone",
+    "load_detector",
     "make_dry_run_config",
     "pretrain",
+    "runtime_report",
 ]
-__version__ = "0.3.1"
+__version__ = "0.5.0"
 
 
 def __getattr__(name: str):
+    if name in {"available_ssl_modules", "create_ssl_module"}:
+        from .ssl import available_ssl_modules, create_ssl_module
+
+        return {
+            "available_ssl_modules": available_ssl_modules,
+            "create_ssl_module": create_ssl_module,
+        }[name]
+    if name in {"available_detection_backends", "create_detector", "load_detector"}:
+        from .detection import available_detection_backends, create_detector, load_detector
+
+        return {
+            "available_detection_backends": available_detection_backends,
+            "create_detector": create_detector,
+            "load_detector": load_detector,
+        }[name]
+    if name in {"assert_supported_runtime", "runtime_report"}:
+        from .runtime import assert_supported_runtime, runtime_report
+
+        return {
+            "assert_supported_runtime": assert_supported_runtime,
+            "runtime_report": runtime_report,
+        }[name]
     if name in {
         "DistributedPretrainResult",
         "launch_distributed_pretrain",
@@ -57,6 +92,13 @@ def __getattr__(name: str):
         return {
             "build_dinov2_transform": build_dinov2_transform,
             "load_dinov2_backbone": load_dinov2_backbone,
+        }[name]
+    if name in {"build_dinov3_transform", "load_dinov3_backbone"}:
+        from .backbones import build_dinov3_transform, load_dinov3_backbone
+
+        return {
+            "build_dinov3_transform": build_dinov3_transform,
+            "load_dinov3_backbone": load_dinov3_backbone,
         }[name]
     if name == "PretrainConfig":
         from .config import PretrainConfig

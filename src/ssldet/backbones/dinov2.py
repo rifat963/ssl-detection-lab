@@ -86,10 +86,7 @@ class DINOv2FeatureEncoder(nn.Module):
 
 
 def _torch_load(path: str | Path) -> Any:
-    try:
-        return torch.load(path, map_location="cpu", weights_only=True)
-    except TypeError:  # PyTorch 2.0 compatibility
-        return torch.load(path, map_location="cpu")
+    return torch.load(path, map_location="cpu", weights_only=True)
 
 
 def _checkpoint_state(checkpoint: Any) -> dict[str, torch.Tensor]:
@@ -130,17 +127,18 @@ def build_dinov2_transform(image_size: int = 518):
 
     if image_size < 14:
         raise ValueError("image_size must be at least one 14x14 patch")
-    from torchvision import transforms
+    from torchvision.transforms import InterpolationMode, v2
 
-    return transforms.Compose(
+    return v2.Compose(
         [
-            transforms.Resize(
+            v2.Resize(
                 (image_size, image_size),
-                interpolation=transforms.InterpolationMode.BICUBIC,
+                interpolation=InterpolationMode.BICUBIC,
                 antialias=True,
             ),
-            transforms.ToTensor(),
-            transforms.Normalize(
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Normalize(
                 mean=(0.485, 0.456, 0.406),
                 std=(0.229, 0.224, 0.225),
             ),
@@ -153,31 +151,37 @@ def load_dinov2_backbone(
     *,
     pretrained: bool = True,
     weights_file: str | Path | None = None,
+    weights: str | Path | None = None,
     repository: str | Path = "facebookresearch/dinov2",
     source: str = "github",
     device: str | torch.device | None = None,
     freeze: bool = True,
 ) -> DINOv2FeatureEncoder:
-    """Load an official DINOv2 architecture from PyTorch Hub.
+    """Load an official DINOv2 architecture and optional pretrained weights.
 
     Set ``source='local'`` and point ``repository`` to a cloned official DINOv2
-    repository for offline use. When ``weights_file`` is supplied, the architecture
-    is created without downloading weights and the local state dictionary is loaded.
+    repository for offline use. By default ``pretrained=True`` downloads Meta's official
+    pretrained backbone through PyTorch Hub. ``weights`` and the backwards-compatible
+    ``weights_file`` alias accept a local state dictionary instead.
     """
 
     if model_name not in DINOV2_SPECS:
         raise ValueError(f"model_name must be one of {sorted(DINOV2_SPECS)}")
     if source not in {"github", "local"}:
         raise ValueError("source must be 'github' or 'local'")
-    use_hub_weights = bool(pretrained and weights_file is None)
+    if weights is not None and weights_file is not None:
+        raise ValueError("Provide only one of weights or weights_file")
+    selected_weights = weights if weights is not None else weights_file
+    use_hub_weights = bool(pretrained and selected_weights is None)
     model = torch.hub.load(
         str(repository),
         model_name,
         source=source,
         pretrained=use_hub_weights,
+        trust_repo=True,
     )
-    if weights_file is not None:
-        state = _checkpoint_state(_torch_load(weights_file))
+    if selected_weights is not None:
+        state = _checkpoint_state(_torch_load(selected_weights))
         incompatible = model.load_state_dict(state, strict=False)
         if len(incompatible.unexpected_keys) == len(state):
             raise ValueError("The checkpoint does not match the selected DINOv2 architecture")

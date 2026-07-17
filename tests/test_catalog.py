@@ -1,4 +1,9 @@
-from ssldet.catalog import SSL_ARCHITECTURES, capabilities, resolve_model_family
+from ssldet.catalog import (
+    DINOV3_FEATURE_BACKBONES,
+    SSL_ARCHITECTURES,
+    capabilities,
+    resolve_model_family,
+)
 
 
 def test_catalog_lists_every_ssl_architecture():
@@ -12,6 +17,8 @@ def test_catalog_lists_every_ssl_architecture():
     }
     assert capabilities()["model_families"]
     assert len(capabilities()["dinov2_feature_backbones"]) == 8
+    assert len(DINOV3_FEATURE_BACKBONES) == 10
+    assert capabilities()["object_detection_backends"][0]["name"] == "Ultralytics"
 
 
 def test_model_family_resolution_handles_variants_and_custom_weights():

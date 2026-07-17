@@ -45,7 +45,12 @@ def sample_target_blocks(
             block_width = max(1, min(width, round(math.sqrt(area * ratio))))
             top = int(torch.randint(0, height - block_height + 1, (1,)).item())
             left = int(torch.randint(0, width - block_width + 1, (1,)).item())
-            masks[batch_index, block_index, top : top + block_height, left : left + block_width] = True
+            masks[
+                batch_index,
+                block_index,
+                top : top + block_height,
+                left : left + block_width,
+            ] = True
     return masks
 
 

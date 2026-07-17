@@ -8,6 +8,63 @@ The package was designed for CSE445 Computer Vision labs and Kaggle runtimes. La
 loops live in normal Python modules; notebooks contain configuration, method calls, plots,
 evaluation, and interpretation.
 
+## Current runtime baseline
+
+Version 0.5 uses the current accelerator-neutral PyTorch APIs and the recommended torchvision
+transforms v2 pipeline. Its tested dependency floor is Python 3.10+, PyTorch 2.4+,
+torchvision 0.19+, and Ultralytics 8.4.96+. On managed GPU platforms, keep the platform's
+CUDA-matched PyTorch build and upgrade this package plus Ultralytics; do not blindly replace
+PyTorch with a CPU-only wheel.
+
+The baseline was refreshed on 17 July 2026 against PyTorch 2.13 documentation, torchvision
+0.28 documentation, and Ultralytics 8.4.96. The lower PyTorch/torchvision floor intentionally
+supports CUDA-matched Kaggle images while using the same non-deprecated APIs.
+
+## Reusable package structure
+
+```text
+ssldet.ssl          reusable objectives, losses, interfaces, and custom-module registry
+ssldet.backbones    YOLO, DINOv2, and DINOv3 feature encoders
+ssldet.detection    backend-neutral detector protocol and Ultralytics adapter
+ssldet.evaluation   labelled object-detection evaluation and metric export
+ssldet.video        streaming detection/tracking and video metrics
+ssldet.workflow     student-friendly dry-run and distributed-launch helpers
+```
+
+Use a built-in SSL objective with any compatible PyTorch encoder:
+
+```python
+from ssldet.ssl import available_ssl_modules, create_ssl_module
+
+print(available_ssl_modules())
+simclr = create_ssl_module(
+    "simclr",
+    encoder=my_encoder,
+    feature_dim=768,
+    hidden_dim=1024,
+    projection_dim=256,
+    temperature=0.2,
+)
+loss = simclr((first_view, second_view))
+```
+
+Custom objectives can subclass `SSLMethod` and be registered with `register_ssl_module()`.
+Pooled objectives require an encoder returning `B x C`; MAE and I-JEPA additionally require
+`forward_feature_map()` returning `B x C x H x W`.
+
+Inspect the exact environment before a run:
+
+```bash
+ssldet doctor
+```
+
+```python
+from ssldet import assert_supported_runtime, runtime_report
+
+print(runtime_report())
+assert_supported_runtime(require_cuda=True, minimum_gpus=2)
+```
+
 ## Kaggle football tutorial
 
 The student-oriented
@@ -71,6 +128,8 @@ catalog = capabilities()
 print(catalog["model_families"])
 print(catalog["ssl_architectures"])
 print(catalog["dinov2_feature_backbones"])
+print(catalog["dinov3_feature_backbones"])
+print(catalog["object_detection_backends"])
 ```
 
 For a small one-epoch pipeline check, the public workflow helpers keep notebook code short:
@@ -95,6 +154,12 @@ Official DINOv2 reference feature backbones are catalogued in S/14, B/14, L/14, 
 sizes, each with and without register tokens. They are general-purpose ViT feature extractors,
 not standalone object detectors. A detection head is required before they can produce boxes or
 tracks in the video-analysis module.
+
+**Yes, DINOv2 includes pretrained weights.** `load_dinov2_backbone()` defaults to
+`pretrained=True`, so PyTorch Hub downloads Meta's official pretrained backbone. Set
+`pretrained=False` for random weights, or provide `weights=`/`weights_file=` with a local
+checkpoint. The standard DINOv2 code and weights are Apache-2.0 according to the
+[official DINOv2 repository](https://github.com/facebookresearch/dinov2).
 
 Load an official pretrained backbone for global embeddings or dense patch features:
 
@@ -133,6 +198,62 @@ The DINOv2 loss module itself accepts any PyTorch encoder returning a `B x C` re
 The packaged end-to-end pretraining pipeline currently supplies adapters for the YOLO model
 families in the table above. ResNet, ConvNeXt, EfficientNet, Swin, and other ViT families can
 use the loss module after providing a compatible pooled-feature adapter.
+
+### DINOv3 feature backbones and pretrained weights
+
+DINOv3 support is a reusable **feature-backbone loader**, not a claim that this package
+reproduces Meta's full DINOv3 training recipe. The official recipe includes DINO
+self-distillation, iBOT, KoLeo, Gram anchoring, and large-scale FSDP2 training.
+
+Official DINOv3 weights require access through Meta. Supply the authorized checkpoint URL or a
+downloaded local file through `weights=`:
+
+```python
+from ssldet import build_dinov3_transform, load_dinov3_backbone
+
+encoder = load_dinov3_backbone(
+    "dinov3_vitb16",
+    weights="/kaggle/input/dinov3-weights/dinov3_vitb16.pth",
+    device="cuda",
+)
+preprocess = build_dinov3_transform(256, weights_dataset="lvd1689m")
+
+global_embeddings = encoder(images)                # B x 768
+patch_tokens = encoder.forward_tokens(images)      # B x N x 768
+feature_maps = encoder.forward_feature_map(images) # B x 768 x H/16 x W/16
+```
+
+For offline use, clone the official repository and set `repository=/path/to/dinov3` plus
+`source="local"`. Passing no `weights` constructs a randomly initialized architecture. The
+official repository requires PyTorch 2.7.1+; install the optional requirement only with a
+CUDA-compatible PyTorch build:
+
+```bash
+pip install -e ".[dinov3]"
+```
+
+The loader covers the official pretrained ViT-S/S+/B/L/H+/7B and ConvNeXt
+Tiny/Small/Base/Large backbones. Web weights use `weights_dataset="lvd1689m"`; satellite
+ViT-L/7B weights use `weights_dataset="sat493m"`. DINOv3 code and weights retain Meta's
+separate [DINOv3 License](https://github.com/facebookresearch/dinov3/blob/main/LICENSE.md).
+
+## Reusable object-detection module
+
+The object-detection adapter isolates third-party model loading from evaluation and video
+reporting:
+
+```python
+from ssldet.detection import load_detector
+
+detector = load_detector("yolo26n", "yolo26n.pt")
+predictions = detector.predict(source="match.jpg", conf=0.25)
+validation = detector.validate(data="football.yaml", split="test")
+tracks = detector.track(source="match.mp4", tracker="botsort.yaml", stream=True)
+```
+
+`ObjectDetector` is a protocol, so another backend can implement `predict()`, `track()`, and
+`validate()` without changing the SSL modules. Register it with `register_detection_backend()`
+and create it through `create_detector(..., backend="name")`.
 
 ## Analyse a video link
 
@@ -425,6 +546,21 @@ pytest -q
 python -m compileall -q src tests
 ```
 
-## License
+## License and third-party terms
 
-MIT. Ultralytics and any downloaded pretrained checkpoints retain their own licenses.
+The original `ssl-detection-lab` code is MIT-licensed. Dependencies and downloaded weights keep
+their own terms; this project's MIT license does not override them.
+
+- **Ultralytics:** its official documentation describes AGPL-3.0 for open-source use and an
+  [Enterprise License](https://www.ultralytics.com/license) for use that does not follow the
+  AGPL requirements. Review the [Ultralytics documentation](https://docs.ultralytics.com/)
+  for your deployment. Research using YOLO26 should also use the
+  [official Ultralytics YOLO26 citation](https://docs.ultralytics.com/models/yolo26/#citations-and-acknowledgments).
+- **DINOv2:** standard DINOv2 code and backbone weights are Apache-2.0 according to the
+  [official repository](https://github.com/facebookresearch/dinov2).
+- **DINOv3:** code and weights use Meta's separate
+  [DINOv3 License](https://github.com/facebookresearch/dinov3/blob/main/LICENSE.md).
+
+See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and [`CITATIONS.md`](CITATIONS.md). This
+is a dependency notice, not legal advice; users remain responsible for checking the terms
+applicable to their use and weights.
