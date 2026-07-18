@@ -8,6 +8,9 @@ The package was designed for CSE445 Computer Vision labs and Kaggle runtimes. La
 loops live in normal Python modules; notebooks contain configuration, method calls, plots,
 evaluation, and interpretation.
 
+> **Students:** jump straight to [Kaggle tutorials — start here](#kaggle-tutorials--start-here)
+> to run every lab in your browser on a free Kaggle T4 x2 GPU.
+
 ## Current runtime baseline
 
 Version 0.7 uses the current accelerator-neutral PyTorch APIs and the recommended torchvision
@@ -66,7 +69,44 @@ print(runtime_report())
 assert_supported_runtime(require_cuda=True, minimum_gpus=2)
 ```
 
-## Kaggle football tutorial
+## Kaggle tutorials — start here
+
+Every tutorial notebook is published as a **public Kaggle notebook**. The fastest way to work
+through the labs is to open a notebook on Kaggle, click **Copy & Edit**, and run it on a free
+**T4 x2 GPU** runtime — no local setup required. The same notebooks are also kept in this
+repository under [`output/jupyter-notebook/`](output/jupyter-notebook/).
+
+### How to run a tutorial on Kaggle
+
+1. Open the Kaggle link and click **Copy & Edit** (Kaggle sign-in required).
+2. In the right sidebar, set **Session options → Accelerator → GPU T4 x2**.
+3. Turn **Internet on** (needed to install this package and download YOLO weights).
+4. Add the football dataset via **Add Input** if it is not already attached:
+   `iasadpanwhar/football-player-detection-yolov8`.
+5. Run all cells top to bottom. Each notebook installs `ssl-detection-lab` for you.
+
+Downstream notebooks consume the `best_ssl.pt` checkpoint produced by the matching SSL
+pretraining notebook, so run the **SSL pretraining** notebook of a pair first (or attach a
+previously saved checkpoint as a Kaggle input).
+
+### Recommended learning path
+
+| # | Tutorial | Kaggle notebook | Local copy |
+|---|---|---|---|
+| 1 | SimCLR pretraining (contrastive SSL basics, t-SNE, nearest neighbors) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-simclr-football-t4x2-tutorial) | [`simclr_football_t4x2_tutorial.ipynb`](output/jupyter-notebook/simclr_football_t4x2_tutorial.ipynb) |
+| 2 | SimCLR → YOLO26 downstream (transfer, fine-tune, evaluate, track) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-simclr-yolo26-football-downstream-tutorial) | [`simclr_yolo26_football_downstream_tutorial.ipynb`](output/jupyter-notebook/simclr_yolo26_football_downstream_tutorial.ipynb) |
+| 3 | BYOL pretraining (online/EMA target branches, AMP, distributed T4 x2) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse-445-byol-football-t4x2-tutorial) | [`byol_football_t4x2_tutorial.ipynb`](output/jupyter-notebook/byol_football_t4x2_tutorial.ipynb) |
+| 4 | I-JEPA pretraining (masked latent-block prediction on YOLO26) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-ijepa-yolo26-football-ssl-tutorial) | [`ijepa_yolo26_football_ssl_tutorial.ipynb`](output/jupyter-notebook/ijepa_yolo26_football_ssl_tutorial.ipynb) |
+| 5 | I-JEPA → YOLO26 downstream | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse-445-ijepa-yolo26-downstream-tutorial) | [`ijepa_yolo26_downstream_tutorial.ipynb`](output/jupyter-notebook/ijepa_yolo26_downstream_tutorial.ipynb) |
+| 6 | DINOv3-guided distillation (frozen-teacher feature distillation into YOLO26) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse-445-dinov3-yolo26-football-ssl-tutorial) | [`dinov3_yolo26_football_ssl_tutorial.ipynb`](output/jupyter-notebook/dinov3_yolo26_football_ssl_tutorial.ipynb) |
+| 7 | DINOv3 → YOLO26 downstream | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-dinov3-yolo26-downstream-tutorial) | [`dinov3_yolo26_downstream_tutorial.ipynb`](output/jupyter-notebook/dinov3_yolo26_downstream_tutorial.ipynb) |
+| 8 | Data association and multi-object tracking with Ultralytics trackers | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-data-association-ultralytics-trackers) | — (Kaggle only) |
+
+Tutorials 1–2, 4–5, and 6–7 form pretrain → downstream pairs. Tutorial 3 (BYOL) is a
+standalone pretraining walkthrough, and tutorial 8 covers tracking after you have a fine-tuned
+detector.
+
+### The all-in-one lab notebook
 
 The student-oriented
 [`ssl_detection_lab_football_t4x2_tutorial.ipynb`](output/jupyter-notebook/ssl_detection_lab_football_t4x2_tutorial.ipynb)
@@ -76,33 +116,22 @@ fine-tunes one detector, exports labelled evaluation metrics, and exercises vide
 notebook installs the library from an attached source folder when available, otherwise from the
 project's GitHub repository. It contains no embedded wheel or generated Base64 package data.
 
-For a focused training walkthrough, use
-[`simclr_football_t4x2_tutorial.ipynb`](output/jupyter-notebook/simclr_football_t4x2_tutorial.ipynb).
-It trains a YOLO backbone with SimCLR using image pixels only, plots the training history,
-extracts validation features, creates a labelled t-SNE visualization, and inspects cosine-nearest
-neighbors in the learned feature space.
+### What each tutorial teaches
 
-The matching
-[`byol_football_t4x2_tutorial.ipynb`](output/jupyter-notebook/byol_football_t4x2_tutorial.ipynb)
-explains the online and EMA target branches, demonstrates the reusable BYOL factory, trains with
-AMP and distributed T4 x2 execution, checks for feature variation, and visualizes the learned
-representation with t-SNE and cosine-nearest neighbors.
-
-The downstream
-[`simclr_yolo26_football_downstream_tutorial.ipynb`](output/jupyter-notebook/simclr_yolo26_football_downstream_tutorial.ipynb)
-transfers a SimCLR `best_ssl.pt` online encoder into YOLO26, verifies backbone-key coverage,
-warms up the randomly initialized detection head, fine-tunes the complete detector, exports
-labelled test metrics, and runs tracking and video analysis.
-
-Four focused tutorials cover the additional YOLO26 workflows:
-
-- [`ijepa_yolo26_football_ssl_tutorial.ipynb`](output/jupyter-notebook/ijepa_yolo26_football_ssl_tutorial.ipynb)
-- [`dinov3_yolo26_football_ssl_tutorial.ipynb`](output/jupyter-notebook/dinov3_yolo26_football_ssl_tutorial.ipynb)
-- [`ijepa_yolo26_downstream_tutorial.ipynb`](output/jupyter-notebook/ijepa_yolo26_downstream_tutorial.ipynb)
-- [`dinov3_yolo26_downstream_tutorial.ipynb`](output/jupyter-notebook/dinov3_yolo26_downstream_tutorial.ipynb)
-
-The DINOv3 SSL notebook performs label-free frozen-teacher feature distillation into YOLO26. It
-does not claim to reproduce the full official DINOv3 pretraining recipe.
+- **SimCLR pretraining** trains a YOLO backbone with SimCLR using image pixels only, plots the
+  training history, extracts validation features, creates a labelled t-SNE visualization, and
+  inspects cosine-nearest neighbors in the learned feature space.
+- **BYOL pretraining** explains the online and EMA target branches, demonstrates the reusable
+  BYOL factory, trains with AMP and distributed T4 x2 execution, checks for feature variation,
+  and visualizes the learned representation with t-SNE and cosine-nearest neighbors.
+- **SimCLR downstream** transfers a SimCLR `best_ssl.pt` online encoder into YOLO26, verifies
+  backbone-key coverage, warms up the randomly initialized detection head, fine-tunes the
+  complete detector, exports labelled test metrics, and runs tracking and video analysis. The
+  I-JEPA and DINOv3 downstream notebooks follow the same structure for their checkpoints.
+- **The DINOv3 SSL notebook** performs label-free frozen-teacher feature distillation into
+  YOLO26. It does not claim to reproduce the full official DINOv3 pretraining recipe.
+- **The tracker notebook** works with the Ultralytics tracker configurations (BoT-SORT,
+  ByteTrack) and the data-association step that links detections into tracks across frames.
 
 ## Start here: supported models and SSL architectures
 
