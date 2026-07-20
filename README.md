@@ -96,15 +96,15 @@ previously saved checkpoint as a Kaggle input).
 | 1 | SimCLR pretraining (contrastive SSL basics, t-SNE, nearest neighbors) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-simclr-football-t4x2-tutorial) | [`simclr_football_t4x2_tutorial.ipynb`](output/jupyter-notebook/simclr_football_t4x2_tutorial.ipynb) |
 | 2 | SimCLR → YOLO26 downstream (transfer, fine-tune, evaluate, track) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-simclr-yolo26-football-downstream-tutorial) | [`simclr_yolo26_football_downstream_tutorial.ipynb`](output/jupyter-notebook/simclr_yolo26_football_downstream_tutorial.ipynb) |
 | 3 | BYOL pretraining (online/EMA target branches, AMP, distributed T4 x2) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse-445-byol-football-t4x2-tutorial) | [`byol_football_t4x2_tutorial.ipynb`](output/jupyter-notebook/byol_football_t4x2_tutorial.ipynb) |
-| 4 | I-JEPA pretraining (masked latent-block prediction on YOLO26) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-ijepa-yolo26-football-ssl-tutorial) | [`ijepa_yolo26_football_ssl_tutorial.ipynb`](output/jupyter-notebook/ijepa_yolo26_football_ssl_tutorial.ipynb) |
-| 5 | I-JEPA → YOLO26 downstream | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse-445-ijepa-yolo26-downstream-tutorial) | [`ijepa_yolo26_downstream_tutorial.ipynb`](output/jupyter-notebook/ijepa_yolo26_downstream_tutorial.ipynb) |
-| 6 | DINOv3-guided distillation (frozen-teacher feature distillation into YOLO26) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse-445-dinov3-yolo26-football-ssl-tutorial) | [`dinov3_yolo26_football_ssl_tutorial.ipynb`](output/jupyter-notebook/dinov3_yolo26_football_ssl_tutorial.ipynb) |
-| 7 | DINOv3 → YOLO26 downstream | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-dinov3-yolo26-downstream-tutorial) | [`dinov3_yolo26_downstream_tutorial.ipynb`](output/jupyter-notebook/dinov3_yolo26_downstream_tutorial.ipynb) |
-| 8 | Data association and multi-object tracking with Ultralytics trackers | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-data-association-ultralytics-trackers) | — (Kaggle only) |
+| 4 | BYOL → YOLO26 downstream (transfer, fine-tune, evaluate, BoT-SORT tracking) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-byol-yolo26-football-downstream-tutorial) | [`byol_yolo26_football_downstream_tutorial.ipynb`](output/jupyter-notebook/byol_yolo26_football_downstream_tutorial.ipynb) |
+| 5 | I-JEPA pretraining (masked latent-block prediction on YOLO26) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-ijepa-yolo26-football-ssl-tutorial) | [`ijepa_yolo26_football_ssl_tutorial.ipynb`](output/jupyter-notebook/ijepa_yolo26_football_ssl_tutorial.ipynb) |
+| 6 | I-JEPA → YOLO26 downstream | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse-445-ijepa-yolo26-downstream-tutorial) | [`ijepa_yolo26_downstream_tutorial.ipynb`](output/jupyter-notebook/ijepa_yolo26_downstream_tutorial.ipynb) |
+| 7 | DINOv3-guided distillation (frozen-teacher feature distillation into YOLO26) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse-445-dinov3-yolo26-football-ssl-tutorial) | [`dinov3_yolo26_football_ssl_tutorial.ipynb`](output/jupyter-notebook/dinov3_yolo26_football_ssl_tutorial.ipynb) |
+| 8 | DINOv3 → YOLO26 downstream | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-dinov3-yolo26-downstream-tutorial) | [`dinov3_yolo26_downstream_tutorial.ipynb`](output/jupyter-notebook/dinov3_yolo26_downstream_tutorial.ipynb) |
+| 9 | Data association and multi-object tracking with Ultralytics trackers | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-data-association-ultralytics-trackers) | — (Kaggle only) |
 
-Tutorials 1–2, 4–5, and 6–7 form pretrain → downstream pairs. Tutorial 3 (BYOL) is a
-standalone pretraining walkthrough, and tutorial 8 covers tracking after you have a fine-tuned
-detector.
+Tutorials 1–2, 3–4, 5–6, and 7–8 form pretrain → downstream pairs. Tutorial 9 gives tracking
+additional standalone coverage after you have a fine-tuned detector.
 
 ### The all-in-one lab notebook
 
@@ -123,11 +123,14 @@ project's GitHub repository. It contains no embedded wheel or generated Base64 p
   inspects cosine-nearest neighbors in the learned feature space.
 - **BYOL pretraining** explains the online and EMA target branches, demonstrates the reusable
   BYOL factory, trains with AMP and distributed T4 x2 execution, checks for feature variation,
-  and visualizes the learned representation with t-SNE and cosine-nearest neighbors.
+  and visualizes the learned representation with t-SNE and cosine-nearest neighbors. Its paired
+  **BYOL downstream** notebook transfers `best_ssl.pt`, warms up the YOLO26 detection head,
+  fine-tunes on the same football dataset, evaluates the labelled test split, and runs BoT-SORT
+  tracking on the dataset video with CSV and annotated-video exports.
 - **SimCLR downstream** transfers a SimCLR `best_ssl.pt` online encoder into YOLO26, verifies
   backbone-key coverage, warms up the randomly initialized detection head, fine-tunes the
   complete detector, exports labelled test metrics, and runs tracking and video analysis. The
-  I-JEPA and DINOv3 downstream notebooks follow the same structure for their checkpoints.
+  BYOL, I-JEPA, and DINOv3 downstream notebooks follow the same structure for their checkpoints.
 - **The DINOv3 SSL notebook** performs label-free frozen-teacher feature distillation into
   YOLO26. It does not claim to reproduce the full official DINOv3 pretraining recipe.
 - **The tracker notebook** works with the Ultralytics tracker configurations (BoT-SORT,
