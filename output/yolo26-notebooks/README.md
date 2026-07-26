@@ -1,7 +1,7 @@
 # YOLO26 SSL tutorial notebooks
 
 The Kaggle tutorial series for **YOLO26**, plus the all-in-one lab notebook. Each notebook is also
-published publicly on Kaggle — see the table in the [project README](../../README.md#kaggle-tutorials--start-here)
+published publicly on Kaggle — see the table in the [project README](../../README.md#kaggle-labs)
 for the direct links.
 
 ## Pretrain → downstream pairs

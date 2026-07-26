@@ -11,7 +11,7 @@ normal Python modules; notebooks hold configuration, plots, and interpretation.
 
 | If you want to… | Go to |
 |---|---|
-| Run a lab in your browser, no setup | [Kaggle tutorials](../README.md#kaggle-tutorials--start-here) |
+| Run a lab in your browser, no setup | [Kaggle labs](../README.md#kaggle-labs) |
 | Install locally or on a cluster | [Installation](Installation.md) |
 | Pretrain something in 10 minutes | [Quickstart](Quickstart.md) |
 | Pick an SSL objective | [SSL Methods](SSL-Methods.md) |
