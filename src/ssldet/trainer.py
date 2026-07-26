@@ -19,6 +19,7 @@ from .backbones import YOLOBackboneEncoder
 from .config import PretrainConfig
 from .data import UnlabeledImageDataset, build_transform, discover_images
 from .registry import build_method
+from .ssl import ssl_module_requires_two_views
 from .utils import (
     DistributedContext,
     cleanup_distributed,
@@ -95,7 +96,7 @@ def _pretrain(config: PretrainConfig, distributed: DistributedContext) -> Pretra
 
     image_paths = discover_images(config.image_roots, config.max_images, config.seed)
     dataset = UnlabeledImageDataset(image_paths, build_transform(config))
-    if config.method in {"simclr", "byol", "moco", "dinov2"} and len(dataset) < 2:
+    if ssl_module_requires_two_views(config.method) and len(dataset) < 2:
         raise ValueError(f"{config.method} requires at least two images")
     if config.method == "simclr" and math.ceil(len(dataset) / distributed.world_size) < 2:
         raise ValueError("SimCLR requires at least two images per distributed process")

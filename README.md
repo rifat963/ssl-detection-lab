@@ -11,6 +11,12 @@ evaluation, and interpretation.
 > **Students:** jump straight to [Kaggle tutorials — start here](#kaggle-tutorials--start-here)
 > to run every lab in your browser on a free Kaggle T4 x2 GPU.
 
+📖 **Documentation:** task-oriented guides live in the [`wiki/`](wiki/) folder —
+[Installation](wiki/Installation.md) · [Quickstart](wiki/Quickstart.md) ·
+[SSL Methods](wiki/SSL-Methods.md) · [Model Families](wiki/Model-Families.md) ·
+[Evaluation](wiki/Evaluation.md) · [Video Analysis](wiki/Video-Analysis.md) ·
+[Troubleshooting](wiki/Troubleshooting.md) · [Contributing](wiki/Contributing.md)
+
 ## Current runtime baseline
 
 Version 0.8.1 uses the current accelerator-neutral PyTorch APIs and the recommended torchvision
@@ -54,7 +60,9 @@ loss = simclr((first_view, second_view))
 
 Custom objectives can subclass `SSLMethod` and be registered with `register_ssl_module()`.
 Pooled objectives require an encoder returning `B x C`; MAE and I-JEPA additionally require
-`forward_feature_map()` returning `B x C x H x W`.
+`forward_feature_map()` returning `B x C x H x W`. Set `requires_two_views = True` on the class
+when the objective consumes more than one view — the trainer reads it through
+`ssl_module_requires_two_views()` to decide whether a dataset is large enough.
 
 Inspect the exact environment before a run:
 
@@ -74,7 +82,7 @@ assert_supported_runtime(require_cuda=True, minimum_gpus=2)
 Every tutorial notebook is published as a **public Kaggle notebook**. The fastest way to work
 through the labs is to open a notebook on Kaggle, click **Copy & Edit**, and run it on a free
 **T4 x2 GPU** runtime — no local setup required. The same notebooks are also kept in this
-repository under [`output/jupyter-notebook/`](output/jupyter-notebook/).
+repository under [`output/yolo26-notebooks/`](output/yolo26-notebooks/).
 
 ### How to run a tutorial on Kaggle
 
@@ -93,23 +101,33 @@ previously saved checkpoint as a Kaggle input).
 
 | # | Tutorial | Kaggle notebook | Local copy |
 |---|---|---|---|
-| 1 | SimCLR pretraining (contrastive SSL basics, t-SNE, nearest neighbors) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-simclr-football-t4x2-tutorial) | [`simclr_football_t4x2_tutorial.ipynb`](output/jupyter-notebook/simclr_football_t4x2_tutorial.ipynb) |
-| 2 | SimCLR → YOLO26 downstream (transfer, fine-tune, evaluate, track) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-simclr-yolo26-football-downstream-tutorial) | [`simclr_yolo26_football_downstream_tutorial.ipynb`](output/jupyter-notebook/simclr_yolo26_football_downstream_tutorial.ipynb) |
-| 3 | BYOL pretraining (online/EMA target branches, AMP, distributed T4 x2) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse-445-byol-football-t4x2-tutorial) | [`byol_football_t4x2_tutorial.ipynb`](output/jupyter-notebook/byol_football_t4x2_tutorial.ipynb) |
-| 4 | BYOL → YOLO26 downstream (transfer, fine-tune, evaluate, BoT-SORT tracking) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-byol-yolo26-football-downstream-tutorial) | [`byol_yolo26_football_downstream_tutorial.ipynb`](output/jupyter-notebook/byol_yolo26_football_downstream_tutorial.ipynb) |
-| 5 | I-JEPA pretraining (masked latent-block prediction on YOLO26) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-ijepa-yolo26-football-ssl-tutorial) | [`ijepa_yolo26_football_ssl_tutorial.ipynb`](output/jupyter-notebook/ijepa_yolo26_football_ssl_tutorial.ipynb) |
-| 6 | I-JEPA → YOLO26 downstream | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse-445-ijepa-yolo26-downstream-tutorial) | [`ijepa_yolo26_downstream_tutorial.ipynb`](output/jupyter-notebook/ijepa_yolo26_downstream_tutorial.ipynb) |
-| 7 | DINOv3-guided distillation (frozen-teacher feature distillation into YOLO26) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse-445-dinov3-yolo26-football-ssl-tutorial) | [`dinov3_yolo26_football_ssl_tutorial.ipynb`](output/jupyter-notebook/dinov3_yolo26_football_ssl_tutorial.ipynb) |
-| 8 | DINOv3 → YOLO26 downstream | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-dinov3-yolo26-downstream-tutorial) | [`dinov3_yolo26_downstream_tutorial.ipynb`](output/jupyter-notebook/dinov3_yolo26_downstream_tutorial.ipynb) |
+| 1 | SimCLR pretraining (contrastive SSL basics, t-SNE, nearest neighbors) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-simclr-football-t4x2-tutorial) | [`simclr_football_t4x2_tutorial.ipynb`](output/yolo26-notebooks/simclr_football_t4x2_tutorial.ipynb) |
+| 2 | SimCLR → YOLO26 downstream (transfer, fine-tune, evaluate, track) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-simclr-yolo26-football-downstream-tutorial) | [`simclr_yolo26_football_downstream_tutorial.ipynb`](output/yolo26-notebooks/simclr_yolo26_football_downstream_tutorial.ipynb) |
+| 3 | BYOL pretraining (online/EMA target branches, AMP, distributed T4 x2) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse-445-byol-football-t4x2-tutorial) | [`byol_football_t4x2_tutorial.ipynb`](output/yolo26-notebooks/byol_football_t4x2_tutorial.ipynb) |
+| 4 | BYOL → YOLO26 downstream (transfer, fine-tune, evaluate, BoT-SORT tracking) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-byol-yolo26-football-downstream-tutorial) | [`byol_yolo26_football_downstream_tutorial.ipynb`](output/yolo26-notebooks/byol_yolo26_football_downstream_tutorial.ipynb) |
+| 5 | I-JEPA pretraining (masked latent-block prediction on YOLO26) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-ijepa-yolo26-football-ssl-tutorial) | [`ijepa_yolo26_football_ssl_tutorial.ipynb`](output/yolo26-notebooks/ijepa_yolo26_football_ssl_tutorial.ipynb) |
+| 6 | I-JEPA → YOLO26 downstream | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse-445-ijepa-yolo26-downstream-tutorial) | [`ijepa_yolo26_downstream_tutorial.ipynb`](output/yolo26-notebooks/ijepa_yolo26_downstream_tutorial.ipynb) |
+| 7 | DINOv3-guided distillation (frozen-teacher feature distillation into YOLO26) | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse-445-dinov3-yolo26-football-ssl-tutorial) | [`dinov3_yolo26_football_ssl_tutorial.ipynb`](output/yolo26-notebooks/dinov3_yolo26_football_ssl_tutorial.ipynb) |
+| 8 | DINOv3 → YOLO26 downstream | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-dinov3-yolo26-downstream-tutorial) | [`dinov3_yolo26_downstream_tutorial.ipynb`](output/yolo26-notebooks/dinov3_yolo26_downstream_tutorial.ipynb) |
 | 9 | Data association and multi-object tracking with Ultralytics trackers | [Open on Kaggle](https://www.kaggle.com/code/rifat963/cse445-data-association-ultralytics-trackers) | — (Kaggle only) |
 
 Tutorials 1–2, 3–4, 5–6, and 7–8 form pretrain → downstream pairs. Tutorial 9 gives tracking
 additional standalone coverage after you have a fine-tuned detector.
 
+### YOLO12 notebook set
+
+[`output/yolo12-notebooks/`](output/yolo12-notebooks/) mirrors the series against a **YOLO12**
+backbone, with one self-contained pretrain → transfer notebook per SSL objective: SimCLR, BYOL,
+MoCo, DINOv2, DINOv3, MAE, and I-JEPA. Each ends by transferring the learned backbone into a
+YOLO12 detector checkpoint.
+
+Use the official `yolo12n.yaml` spelling. Ultralytics dropped the `v` from YOLO11 onward, so
+`yolov12n.yaml` does not exist upstream and raises `FileNotFoundError`.
+
 ### The all-in-one lab notebook
 
 The student-oriented
-[`ssl_detection_lab_football_t4x2_tutorial.ipynb`](output/jupyter-notebook/ssl_detection_lab_football_t4x2_tutorial.ipynb)
+[`ssl_detection_lab_football_t4x2_tutorial.ipynb`](output/yolo26-notebooks/ssl_detection_lab_football_t4x2_tutorial.ipynb)
 uses the `iasadpanwhar/football-player-detection-yolov8` dataset and a Kaggle T4 x2 runtime. It
 audits the YOLO labels, dry-runs every self-contained SSL method, probes every supported model family,
 fine-tunes one detector, exports labelled evaluation metrics, and exercises video analysis. The
@@ -443,7 +461,11 @@ actual YOLO backbone:
 2. Remove those regions from a single context image.
 3. Encode the visible context with the trainable YOLO backbone.
 4. Encode the complete image with an exponential-moving-average target backbone.
-5. Predict the target-block representations in latent space.
+5. Predict the target-block representations in latent space. The predictor replaces target
+   positions with a shared mask token and then adds a sinusoidal 2-D position embedding to every
+   token, so each masked location is predicted separately. Adding the position embedding before
+   the substitution would discard it at exactly the masked positions; because self-attention is
+   permutation-equivariant, the predictor would then emit one identical latent for every block.
 6. Transfer the trained online backbone directly into YOLO26 detection.
 
 This is a transparent, educational adaptation. It should be described in reports as
@@ -631,8 +653,12 @@ FAST run is a pipeline check, not research evidence.
 ```bash
 pip install -e ".[dev]"
 pytest -q
+ruff check src tests examples
 python -m compileall -q src tests
 ```
+
+Contributor workflow, including how to add a new SSL objective, lives in
+[`wiki/Contributing.md`](wiki/Contributing.md).
 
 ## License and third-party terms
 

@@ -66,14 +66,32 @@ class LatentPredictor(nn.Module):
             batch_first=True,
             norm_first=True,
         )
-        self.transformer = nn.TransformerEncoder(layer, num_layers=depth)
+        # norm_first blocks the nested-tensor fast path; ask for it explicitly to
+        # avoid a per-construction warning about the unusable optimization.
+        self.transformer = nn.TransformerEncoder(
+            layer, num_layers=depth, enable_nested_tensor=False
+        )
         self.mask_token = nn.Parameter(torch.zeros(1, 1, dim))
         nn.init.trunc_normal_(self.mask_token, std=0.02)
 
-    def forward(self, tokens: torch.Tensor, target_union: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        tokens: torch.Tensor,
+        target_union: torch.Tensor,
+        position: torch.Tensor,
+    ) -> torch.Tensor:
+        """Replace target tokens with the shared mask token, then position every token.
+
+        The position embedding must be added *after* the substitution. Adding it first
+        lets ``torch.where`` discard it at exactly the masked locations, leaving every
+        target position holding the same bare mask token. Self-attention is
+        permutation-equivariant, so identical inputs produce identical outputs and the
+        predictor could only ever emit one averaged latent for all target blocks.
+        """
+
         mask_tokens = self.mask_token.expand(tokens.shape[0], tokens.shape[1], -1)
         predictor_input = torch.where(target_union.unsqueeze(-1), mask_tokens, tokens)
-        return self.transformer(predictor_input)
+        return self.transformer(predictor_input + position)
 
 
 class IJEPA(SSLMethod):
@@ -135,7 +153,7 @@ class IJEPA(SSLMethod):
         target_union = target_union_grid.flatten(2).squeeze(1)
 
         position = sinusoidal_2d_position(grid_height, grid_width, channels, images.device)
-        predictions = self.predictor(context_tokens + position, target_union)
+        predictions = self.predictor(context_tokens, target_union, position)
         predictions = F.layer_norm(predictions, (channels,))
         targets = F.layer_norm(target_tokens, (channels,))
 

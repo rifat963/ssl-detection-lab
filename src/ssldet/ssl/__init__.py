@@ -8,7 +8,12 @@ from ..methods.ijepa import sample_target_blocks, sinusoidal_2d_position
 from ..methods.mae import random_patch_mask
 from ..methods.simclr import NTXentLoss
 from .base import Encoder, ProjectionMLP, SpatialEncoder, SSLMethod, ema_update, frozen_copy
-from .factory import available_ssl_modules, create_ssl_module, register_ssl_module
+from .factory import (
+    available_ssl_modules,
+    create_ssl_module,
+    register_ssl_module,
+    ssl_module_requires_two_views,
+)
 
 __all__ = [
     "BYOL",
@@ -36,4 +41,5 @@ __all__ = [
     "register_ssl_module",
     "sample_target_blocks",
     "sinusoidal_2d_position",
+    "ssl_module_requires_two_views",
 ]

@@ -32,6 +32,9 @@ class MoCo(SSLMethod):
         queue = F.normalize(torch.randn(projection_dim, queue_size), dim=0)
         self.register_buffer("queue", queue)
         self.register_buffer("queue_pointer", torch.zeros(1, dtype=torch.long))
+        # Keys are held until the optimizer steps so a gradient-accumulation group
+        # enqueues one batch of negatives, matching the effective batch size.
+        self._pending_keys: list[torch.Tensor] = []
 
     def train(self, mode: bool = True):
         super().train(mode)
@@ -69,8 +72,6 @@ class MoCo(SSLMethod):
         logits = torch.cat([positive, negative], dim=1) / self.temperature
         labels = torch.zeros(logits.shape[0], dtype=torch.long, device=logits.device)
         loss = F.cross_entropy(logits.float(), labels)
-        if not hasattr(self, "_pending_keys"):
-            self._pending_keys = []
         self._pending_keys.append(keys)
         return loss
 
@@ -78,6 +79,6 @@ class MoCo(SSLMethod):
     def after_optimizer_step(self) -> None:
         ema_update(self.online_encoder, self.target_encoder, self.current_momentum)
         ema_update(self.query_projector, self.key_projector, self.current_momentum)
-        if hasattr(self, "_pending_keys"):
+        if self._pending_keys:
             self._enqueue(torch.cat(self._pending_keys, dim=0))
-            del self._pending_keys
+            self._pending_keys.clear()

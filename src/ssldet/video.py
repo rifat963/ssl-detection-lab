@@ -379,7 +379,7 @@ def analyze_video(config: VideoAnalysisConfig) -> VideoAnalysisResult:
         "model": {
             "name": config.model_name,
             "family": resolve_model_family(config.model_name).name,
-            "weights": config.weights_file,
+            "weights": _plain(config.weights_file),
             "task": task,
             "class_names": names,
         },

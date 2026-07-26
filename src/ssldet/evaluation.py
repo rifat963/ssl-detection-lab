@@ -158,7 +158,10 @@ def _component_metrics(metrics: Any, names: dict[int, str]) -> tuple[dict, list[
         image_metrics = _plain(getattr(component, "image_metrics", {}))
         if isinstance(image_metrics, dict):
             for image, row in image_metrics.items():
-                per_image.append({"task": component_name, "image": str(image), **row})
+                # Ultralytics maps each image to a metric mapping. Tolerate other shapes
+                # rather than failing the whole export after validation has already run.
+                fields = row if isinstance(row, dict) else {"value": row}
+                per_image.append({"task": component_name, "image": str(image), **fields})
     return components, per_class, per_image
 
 

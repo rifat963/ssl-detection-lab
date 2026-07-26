@@ -37,3 +37,17 @@ def test_custom_ssl_module_can_be_registered_and_created():
 
     assert isinstance(module, IdentitySSL)
     assert module.scale == 2.0
+
+
+def test_requires_two_views_matches_multi_view_objectives():
+    """The trainer's dataset guard is derived from the registry, not a duplicated list."""
+
+    from ssldet.ssl import available_ssl_modules, ssl_module_requires_two_views
+
+    two_view = {
+        name for name in available_ssl_modules() if ssl_module_requires_two_views(name)
+    }
+    assert two_view == {"simclr", "byol", "moco", "dinov2"}
+    assert not ssl_module_requires_two_views("mae")
+    assert ssl_module_requires_two_views("  SimCLR  ")
+    assert not ssl_module_requires_two_views("unregistered-method")

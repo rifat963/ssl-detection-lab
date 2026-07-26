@@ -28,6 +28,17 @@ def available_ssl_modules() -> tuple[str, ...]:
     return tuple(sorted(_SSL_MODULES))
 
 
+def ssl_module_requires_two_views(name: str) -> bool:
+    """Return whether an objective needs at least two images per process.
+
+    Reads the ``requires_two_views`` class attribute so the trainer's dataset guard
+    stays in step with the registry instead of repeating a hand-written method list.
+    Factories that are plain callables rather than classes are treated as single-view.
+    """
+
+    return bool(getattr(_SSL_MODULES.get(name.lower().strip()), "requires_two_views", False))
+
+
 def register_ssl_module(name: str, factory: SSLFactory, *, replace: bool = False) -> None:
     """Register a custom SSL objective factory.
 
@@ -64,4 +75,5 @@ __all__ = [
     "available_ssl_modules",
     "create_ssl_module",
     "register_ssl_module",
+    "ssl_module_requires_two_views",
 ]
