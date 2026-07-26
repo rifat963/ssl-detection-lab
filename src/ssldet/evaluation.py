@@ -15,9 +15,9 @@ from .catalog import resolve_model_family
 @dataclass
 class EvaluationConfig:
     model_name: str
-    weights_file: str
-    data: str
-    output_dir: str = "runs/ssldet/evaluation"
+    weights_file: str | Path
+    data: str | Path
+    output_dir: str | Path = "runs/ssldet/evaluation"
     split: str = "val"
     image_size: int = 640
     batch_size: int = 16
@@ -31,7 +31,11 @@ class EvaluationConfig:
     save_json: bool = True
 
     def validate(self) -> "EvaluationConfig":
-        if not self.model_name.strip() or not self.weights_file.strip() or not self.data.strip():
+        if (
+            not str(self.model_name).strip()
+            or not str(self.weights_file).strip()
+            or not str(self.data).strip()
+        ):
             raise ValueError("model_name, weights_file, and data are required")
         if self.image_size < 32 or self.batch_size < 1 or self.max_detections < 1:
             raise ValueError("image_size >= 32, batch_size >= 1, and max_detections >= 1 required")
@@ -85,6 +89,27 @@ def _rows_to_csv(path: Path, rows: list[dict[str, Any]]) -> Path | None:
         writer.writeheader()
         writer.writerows(({key: _plain(value) for key, value in row.items()} for row in rows))
     return path
+
+
+def _confusion_labels(names: dict[int, str], size: int, task: str | None) -> list[str]:
+    """Return unique CSV-safe labels in Ultralytics matrix order."""
+
+    has_background = task not in {"classify", "semantic"} and size == len(names) + 1
+    labels: list[str] = []
+    used: set[str] = set()
+    for index in range(size):
+        label = names.get(
+            index,
+            "background" if has_background and index == size - 1 else f"class_{index}",
+        )
+        candidate = label
+        suffix = 1
+        while candidate in used:
+            candidate = f"{label}_{suffix}"
+            suffix += 1
+        used.add(candidate)
+        labels.append(candidate)
+    return labels
 
 
 def _load_model(model_name: str, weights_file: str):
@@ -182,7 +207,7 @@ def evaluate(config: EvaluationConfig) -> EvaluationResult:
     payload = {
         "schema_version": 1,
         "evaluation_type": "labelled_dataset",
-        "config": asdict(config),
+        "config": _plain(asdict(config)),
         "model_family": resolve_model_family(config.model_name).name,
         "task": getattr(metrics, "task", None),
         "class_names": names,
@@ -205,11 +230,12 @@ def evaluate(config: EvaluationConfig) -> EvaluationResult:
 
     confusion_csv = None
     if isinstance(confusion_values, list) and confusion_values:
-        labels = [names.get(index, "background") for index in range(len(confusion_values))]
+        # Ultralytics stores rows as predictions and columns as ground truth.
+        labels = _confusion_labels(names, len(confusion_values), getattr(metrics, "task", None))
         confusion_rows = []
         for index, values in enumerate(confusion_values):
-            row = {"actual/predicted": labels[index]}
-            row.update({label: value for label, value in zip(labels, values)})
+            row = {"predicted/actual": labels[index]}
+            row.update({label: value for label, value in zip(labels, values, strict=True)})
             confusion_rows.append(row)
         confusion_csv = _rows_to_csv(output_dir / "confusion_matrix.csv", confusion_rows)
 

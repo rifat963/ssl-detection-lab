@@ -91,10 +91,18 @@ def _torch_load(path: str | Path) -> Any:
 
 def _checkpoint_state(checkpoint: Any) -> dict[str, torch.Tensor]:
     state = checkpoint
-    for key in ("teacher", "model", "state_dict", "backbone"):
-        if isinstance(state, dict) and key in state and isinstance(state[key], dict):
-            state = state[key]
+    while isinstance(state, dict):
+        nested = next(
+            (
+                state[key]
+                for key in ("teacher", "model", "state_dict", "backbone")
+                if key in state and isinstance(state[key], dict)
+            ),
+            None,
+        )
+        if nested is None or nested is state:
             break
+        state = nested
     if not isinstance(state, dict):
         raise TypeError("DINOv2 checkpoint must contain a state dictionary")
 

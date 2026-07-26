@@ -20,6 +20,7 @@ from .config import PretrainConfig
 from .data import UnlabeledImageDataset, build_transform, discover_images
 from .registry import build_method
 from .utils import (
+    DistributedContext,
     cleanup_distributed,
     cosine_momentum,
     initialize_distributed,
@@ -56,6 +57,13 @@ def _make_scheduler(optimizer, config: PretrainConfig, optimizer_steps: int):
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=multiplier)
 
 
+def _accumulation_group_size(batch_index: int, total_batches: int, steps: int) -> int:
+    """Return the true divisor for this accumulation group, including a short final group."""
+
+    remainder = total_batches % steps
+    return remainder if remainder and batch_index > total_batches - remainder else steps
+
+
 def _write_history(path: Path, rows: list[dict]) -> None:
     if not rows:
         return
@@ -70,6 +78,14 @@ def pretrain(config: PretrainConfig) -> PretrainResult:
 
     config.validate()
     distributed = initialize_distributed()
+    try:
+        return _pretrain(config, distributed)
+    finally:
+        # This also covers data/model setup failures that happen before the epoch loop.
+        cleanup_distributed()
+
+
+def _pretrain(config: PretrainConfig, distributed: DistributedContext) -> PretrainResult:
     seed_everything(config.seed, distributed.rank)
     output_dir = Path(config.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -81,6 +97,8 @@ def pretrain(config: PretrainConfig) -> PretrainResult:
     dataset = UnlabeledImageDataset(image_paths, build_transform(config))
     if config.method in {"simclr", "byol", "moco", "dinov2"} and len(dataset) < 2:
         raise ValueError(f"{config.method} requires at least two images")
+    if config.method == "simclr" and math.ceil(len(dataset) / distributed.world_size) < 2:
+        raise ValueError("SimCLR requires at least two images per distributed process")
 
     sampler = None
     if distributed.world_size > 1:
@@ -140,7 +158,7 @@ def pretrain(config: PretrainConfig) -> PretrainResult:
         train_model = DistributedDataParallel(
             method,
             device_ids=[distributed.local_rank] if distributed.device.type == "cuda" else None,
-            broadcast_buffers=False,
+            broadcast_buffers=True,
         )
 
     last_checkpoint = output_dir / "last_ssl.pt"
@@ -167,6 +185,11 @@ def pretrain(config: PretrainConfig) -> PretrainResult:
 
             for batch_index, batch in enumerate(progress, start=1):
                 batch = _move_batch(batch, distributed.device)
+                accumulation_size = _accumulation_group_size(
+                    batch_index,
+                    len(loader),
+                    config.grad_accum_steps,
+                )
                 is_update = (
                     batch_index % config.grad_accum_steps == 0 or batch_index == len(loader)
                 )
@@ -186,12 +209,15 @@ def pretrain(config: PretrainConfig) -> PretrainResult:
                         device_type=distributed.device.type,
                         enabled=use_amp,
                     ):
-                        loss = train_model(batch) / config.grad_accum_steps
-                    if not torch.isfinite(loss):
-                        raise FloatingPointError(f"Non-finite SSL loss: {float(loss.detach())}")
-                    scaler.scale(loss).backward()
+                        raw_loss = train_model(batch)
+                        scaled_loss = raw_loss / accumulation_size
+                    if not torch.isfinite(raw_loss):
+                        raise FloatingPointError(
+                            f"Non-finite SSL loss: {float(raw_loss.detach())}"
+                        )
+                    scaler.scale(scaled_loss).backward()
 
-                epoch_loss += float(loss.detach()) * config.grad_accum_steps
+                epoch_loss += float(raw_loss.detach())
                 batches += 1
                 if is_update:
                     scaler.unscale_(optimizer)

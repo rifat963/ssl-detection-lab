@@ -7,7 +7,6 @@ from typing import Any
 
 from ..catalog import resolve_model_family
 
-
 ULTRALYTICS_LICENSE_NOTICE = {
     "dependency": "ultralytics",
     "open_source_license": "AGPL-3.0",

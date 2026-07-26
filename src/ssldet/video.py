@@ -19,10 +19,10 @@ from .evaluation import _load_model, _plain
 
 @dataclass
 class VideoAnalysisConfig:
-    video_source: str
+    video_source: str | int | Path
     model_name: str
-    weights_file: str
-    output_dir: str = "runs/ssldet/video"
+    weights_file: str | Path
+    output_dir: str | Path = "runs/ssldet/video"
     confidence: float = 0.25
     iou: float = 0.7
     image_size: int = 640
@@ -36,11 +36,12 @@ class VideoAnalysisConfig:
     save_confidence: bool = False
 
     def validate(self) -> "VideoAnalysisConfig":
-        if (
-            not self.video_source.strip()
-            or not self.model_name.strip()
-            or not self.weights_file.strip()
-        ):
+        source_missing = (
+            self.video_source < 0
+            if isinstance(self.video_source, int)
+            else not str(self.video_source).strip()
+        )
+        if source_missing or not str(self.model_name).strip() or not str(self.weights_file).strip():
             raise ValueError("video_source, model_name, and weights_file are required")
         if not 0.0 <= self.confidence <= 1.0 or not 0.0 <= self.iou <= 1.0:
             raise ValueError("confidence and iou must be between 0 and 1")
@@ -111,21 +112,27 @@ def _list(value: Any) -> list:
     return [plain]
 
 
-def _probe_local_video(source: str) -> dict[str, Any]:
+def _probe_local_video(source: str | int | Path) -> dict[str, Any]:
+    if isinstance(source, int):
+        return {}
     path = Path(source)
     if not path.is_file():
         return {}
     try:
         import cv2
-
+    except ImportError:
+        return {}
+    try:
         capture = cv2.VideoCapture(str(path))
-        if not capture.isOpened():
-            return {}
-        fps = float(capture.get(cv2.CAP_PROP_FPS))
-        frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
-        width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        capture.release()
+        try:
+            if not capture.isOpened():
+                return {}
+            fps = float(capture.get(cv2.CAP_PROP_FPS))
+            frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+            width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        finally:
+            capture.release()
         return {
             "source_fps": fps if fps > 0 else None,
             "source_frames": frames if frames > 0 else None,
@@ -133,7 +140,7 @@ def _probe_local_video(source: str) -> dict[str, Any]:
             "source_height": height if height > 0 else None,
             "source_duration_seconds": frames / fps if fps > 0 and frames > 0 else None,
         }
-    except (ImportError, OSError):
+    except (OSError, cv2.error):
         return {}
 
 
@@ -277,7 +284,7 @@ def analyze_video(config: VideoAnalysisConfig) -> VideoAnalysisResult:
             if track_ids and len(track_ids) != len(confidences):
                 track_ids = []
 
-            pairs = zip(confidences, class_ids)
+            pairs = zip(confidences, class_ids, strict=True)
             for detection_index, (confidence, class_id_value) in enumerate(pairs, start=1):
                 class_id = int(class_id_value)
                 confidence = float(confidence)
@@ -368,7 +375,7 @@ def analyze_video(config: VideoAnalysisConfig) -> VideoAnalysisResult:
     report = {
         "schema_version": 1,
         "analysis_type": "unlabelled_video",
-        "source": {"value": config.video_source, **source_metadata},
+        "source": {"value": _plain(config.video_source), **source_metadata},
         "model": {
             "name": config.model_name,
             "family": resolve_model_family(config.model_name).name,
@@ -376,7 +383,7 @@ def analyze_video(config: VideoAnalysisConfig) -> VideoAnalysisResult:
             "task": task,
             "class_names": names,
         },
-        "config": asdict(config),
+        "config": _plain(asdict(config)),
         "video_metrics": {
             "frames_processed": frames_processed,
             "sampled_video_seconds": (
@@ -401,14 +408,20 @@ def analyze_video(config: VideoAnalysisConfig) -> VideoAnalysisResult:
                     [
                         a + b + c
                         for a, b, c in zip(
-                            preprocess_times, inference_times, postprocess_times
+                            preprocess_times,
+                            inference_times,
+                            postprocess_times,
+                            strict=True,
                         )
                     ]
                 )
                 if any(
                     a + b + c > 0
                     for a, b, c in zip(
-                        preprocess_times, inference_times, postprocess_times
+                        preprocess_times,
+                        inference_times,
+                        postprocess_times,
+                        strict=True,
                     )
                 )
                 else None

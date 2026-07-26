@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ssl-detection-lab"
-version = "0.8.0"
+version = "0.8.1"
 description = "SSL pretraining, comprehensive evaluation, and video analysis for Ultralytics models"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -39,3 +39,6 @@ where = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "B", "I"]

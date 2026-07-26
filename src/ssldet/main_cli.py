@@ -14,6 +14,10 @@ def _device(value: str) -> str | int:
     return int(value) if value.isdigit() else value
 
 
+def _video_source(value: str) -> str | int:
+    return int(value) if value.isdigit() else value
+
+
 def _catalog_text() -> str:
     catalog = capabilities()
     lines = ["Supported SSL architectures", ""]
@@ -95,7 +99,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     video = subparsers.add_parser("video", help="Analyse a local video, URL, or stream")
     _add_common_model_arguments(video)
-    video.add_argument("--source", required=True, help="Video path, HTTP/RTSP link, or YouTube URL")
+    video.add_argument(
+        "--source",
+        required=True,
+        type=_video_source,
+        help="Video path, webcam index, HTTP/RTSP link, or YouTube URL",
+    )
     video.add_argument(
         "--tracker", default="botsort.yaml", help="Tracker YAML; use 'none' to disable"
     )

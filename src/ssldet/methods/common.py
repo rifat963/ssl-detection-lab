@@ -31,9 +31,11 @@ def frozen_copy(module: nn.Module) -> nn.Module:
 
 @torch.no_grad()
 def ema_update(online: nn.Module, target: nn.Module, momentum: float) -> None:
-    for online_parameter, target_parameter in zip(online.parameters(), target.parameters()):
+    for online_parameter, target_parameter in zip(
+        online.parameters(), target.parameters(), strict=True
+    ):
         target_parameter.data.mul_(momentum).add_(online_parameter.data, alpha=1.0 - momentum)
-    for online_buffer, target_buffer in zip(online.buffers(), target.buffers()):
+    for online_buffer, target_buffer in zip(online.buffers(), target.buffers(), strict=True):
         target_buffer.copy_(online_buffer)
 
 
@@ -47,4 +49,3 @@ class SSLMethod(nn.Module):
 
     def after_optimizer_step(self) -> None:
         return None
-

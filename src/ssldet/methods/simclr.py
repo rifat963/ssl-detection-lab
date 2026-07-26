@@ -18,6 +18,8 @@ class NTXentLoss(nn.Module):
         if first.shape != second.shape:
             raise ValueError(f"View shapes differ: {first.shape} vs {second.shape}")
         batch_size = first.shape[0]
+        if batch_size < 2:
+            raise ValueError("SimCLR requires at least two samples per process")
         representations = F.normalize(torch.cat([first, second], dim=0), dim=1)
         logits = representations @ representations.T / self.temperature
         diagonal = torch.eye(2 * batch_size, dtype=torch.bool, device=logits.device)
@@ -50,4 +52,3 @@ class SimCLR(SSLMethod):
     def forward(self, batch) -> torch.Tensor:
         first, second = batch
         return self.criterion(self.encode(first), self.encode(second))
-

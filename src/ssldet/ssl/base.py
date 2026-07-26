@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable
 
 import torch
-import torch.nn as nn
 
 from ..methods.common import ProjectionMLP, SSLMethod, ema_update, frozen_copy
 

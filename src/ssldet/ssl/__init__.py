@@ -1,13 +1,13 @@
 """Reusable self-supervised learning objectives and extension interfaces."""
 
-from ..methods import BYOL, DINOv2, DINOv3Distillation, IJEPA, MAE, MoCo, SimCLR
+from ..methods import BYOL, IJEPA, MAE, DINOv2, DINOv3Distillation, MoCo, SimCLR
 from ..methods.byol import negative_cosine_similarity
 from ..methods.dinov2 import DINOHead, dino_cross_view_loss, koleo_loss
 from ..methods.dinov3 import cosine_regression
 from ..methods.ijepa import sample_target_blocks, sinusoidal_2d_position
 from ..methods.mae import random_patch_mask
 from ..methods.simclr import NTXentLoss
-from .base import Encoder, ProjectionMLP, SSLMethod, SpatialEncoder, ema_update, frozen_copy
+from .base import Encoder, ProjectionMLP, SpatialEncoder, SSLMethod, ema_update, frozen_copy
 from .factory import available_ssl_modules, create_ssl_module, register_ssl_module
 
 __all__ = [

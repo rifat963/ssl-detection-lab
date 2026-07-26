@@ -49,6 +49,7 @@ def runtime_report() -> dict[str, Any]:
         "cudnn": None,
         "device_count": 0,
         "devices": [],
+        "error": None,
     }
     try:
         import torch
@@ -66,8 +67,11 @@ def runtime_report() -> dict[str, Any]:
             }
             for index in range(torch.cuda.device_count())
         ]
-    except ImportError:
-        pass
+    except (ImportError, OSError, RuntimeError) as error:
+        # A broken binary/DLL or CUDA driver should be reportable through `doctor`, not
+        # make the diagnostic command itself crash.
+        cuda["error"] = f"{type(error).__name__}: {error}"
+        packages["torch"]["supported"] = False
 
     return {
         "python": platform.python_version(),

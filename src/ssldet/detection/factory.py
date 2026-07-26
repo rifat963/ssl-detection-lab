@@ -7,7 +7,6 @@ from collections.abc import Callable
 from .base import ObjectDetector
 from .ultralytics import UltralyticsDetector
 
-
 DetectorFactory = Callable[[str, str], ObjectDetector]
 _DETECTION_BACKENDS: dict[str, DetectorFactory] = {
     "ultralytics": UltralyticsDetector.load,

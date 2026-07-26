@@ -72,19 +72,39 @@ class PretrainConfig:
 
     def validate(self) -> "PretrainConfig":
         supported = {"simclr", "byol", "moco", "dinov2", "dinov3", "mae", "ijepa"}
+        if not isinstance(self.method, str):
+            raise TypeError("method must be a string")
         self.method = self.method.lower().strip()
         if self.method not in supported:
             raise ValueError(f"method must be one of {sorted(supported)}, got {self.method!r}")
-        if not self.image_roots:
+        if not isinstance(self.image_roots, list):
+            raise TypeError("image_roots must be a list of image directories")
+        if not self.image_roots or any(not str(root).strip() for root in self.image_roots):
             raise ValueError("image_roots must contain at least one image directory")
+        if not str(self.output_dir).strip() or not str(self.yolo_model).strip():
+            raise ValueError("output_dir and yolo_model cannot be empty")
         if self.epochs < 1 or self.batch_size < 1 or self.image_size < 32:
             raise ValueError("epochs and batch_size must be positive; image_size must be >= 32")
+        if self.workers < 0:
+            raise ValueError("workers must be non-negative")
+        if self.max_images is not None and self.max_images < 1:
+            raise ValueError("max_images must be positive when provided")
+        if self.learning_rate <= 0.0 or not 0.0 <= self.min_learning_rate <= self.learning_rate:
+            raise ValueError("Require learning_rate > 0 and 0 <= min_learning_rate <= learning_rate")
+        if self.weight_decay < 0.0 or self.gradient_clip <= 0.0:
+            raise ValueError("weight_decay must be non-negative and gradient_clip must be positive")
+        if not 0 <= self.warmup_epochs <= self.epochs:
+            raise ValueError("warmup_epochs must be between 0 and epochs")
         if self.grad_accum_steps < 1:
             raise ValueError("grad_accum_steps must be >= 1")
         if not 0.0 < self.momentum <= self.final_momentum <= 1.0:
             raise ValueError("Require 0 < momentum <= final_momentum <= 1")
-        if not 0.0 < self.mask_ratio < 1.0:
-            raise ValueError("mask_ratio must be between 0 and 1")
+        if self.projection_dim < 1 or self.hidden_dim < 1:
+            raise ValueError("projection_dim and hidden_dim must be positive")
+        if self.method in {"simclr", "moco"} and self.temperature <= 0.0:
+            raise ValueError("temperature must be positive")
+        if self.method == "moco" and self.queue_size < 1:
+            raise ValueError("queue_size must be positive")
         if self.method == "dinov2":
             if self.dino_output_dim < 2 or self.local_crops < 0:
                 raise ValueError("dino_output_dim must be >= 2 and local_crops must be >= 0")
@@ -103,12 +123,19 @@ class PretrainConfig:
                 raise ValueError("DINOv3 loss weights must be non-negative")
             if self.dinov3_global_weight + self.dinov3_dense_weight <= 0.0:
                 raise ValueError("At least one DINOv3 loss weight must be positive")
-        if not 0.0 < self.target_scale_min <= self.target_scale_max < 1.0:
-            raise ValueError("Invalid I-JEPA target scale interval")
-        if self.predictor_heads < 1 or self.projection_dim % self.predictor_heads:
-            raise ValueError("projection_dim must be divisible by predictor_heads")
-        if self.method == "ijepa" and self.projection_dim % 4:
-            raise ValueError("I-JEPA projection_dim must also be divisible by 4")
+        if self.method == "mae" and not 0.0 < self.mask_ratio < 1.0:
+            raise ValueError("mask_ratio must be between 0 and 1")
+        if self.method == "ijepa":
+            if not 0.0 < self.target_scale_min <= self.target_scale_max < 1.0:
+                raise ValueError("Invalid I-JEPA target scale interval")
+            if not 0.0 < self.target_aspect_min <= self.target_aspect_max:
+                raise ValueError("Invalid I-JEPA target aspect interval")
+            if self.num_target_blocks < 1 or self.predictor_depth < 1:
+                raise ValueError("num_target_blocks and predictor_depth must be positive")
+            if self.predictor_heads < 1 or self.projection_dim % self.predictor_heads:
+                raise ValueError("projection_dim must be divisible by predictor_heads")
+            if self.projection_dim % 4:
+                raise ValueError("I-JEPA projection_dim must also be divisible by 4")
         if self.save_every < 1:
             raise ValueError("save_every must be >= 1")
         return self

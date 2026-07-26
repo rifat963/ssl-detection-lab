@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from ssldet.backbones.dinov2 import DINOv2FeatureEncoder, load_dinov2_backbone
+from ssldet.backbones.dinov2 import DINOv2FeatureEncoder, _checkpoint_state, load_dinov2_backbone
 
 
 class FakeOfficialDINOv2(nn.Module):
@@ -35,3 +35,11 @@ def test_dinov2_loader_enables_official_pretrained_weights_by_default(monkeypatc
 
     assert isinstance(encoder, DINOv2FeatureEncoder)
     assert captured["pretrained"] is True
+
+
+def test_nested_official_checkpoint_wrappers_are_unpacked():
+    weight = torch.ones(1)
+
+    assert _checkpoint_state({"teacher": {"backbone": {"module.weight": weight}}}) == {
+        "weight": weight
+    }

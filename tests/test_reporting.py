@@ -1,3 +1,4 @@
+import csv
 import json
 from types import SimpleNamespace
 
@@ -77,6 +78,12 @@ def test_evaluation_exports_correct_per_class_metric_names(monkeypatch, tmp_path
     assert report["per_class"][0]["f1"] == 2 * 0.8 * 0.7 / 1.5
     assert report["per_image"][0]["image"] == "frame1.jpg"
     assert result.confusion_matrix_csv is not None
+    with result.confusion_matrix_csv.open(newline="", encoding="utf-8") as handle:
+        confusion_rows = list(csv.DictReader(handle))
+    assert confusion_rows[0]["predicted/actual"] == "player"
+    assert confusion_rows[0]["player"] == "5"
+    assert confusion_rows[0]["ball"] == "1"
+    assert confusion_rows[0]["background"] == "0"
 
 
 def test_video_analysis_exports_aggregate_and_tabular_reports(monkeypatch, tmp_path):
@@ -100,4 +107,3 @@ def test_video_analysis_exports_aggregate_and_tabular_reports(monkeypatch, tmp_p
     assert result.frames_csv.exists()
     assert result.detections_csv.exists()
     assert result.outcome_markdown.exists()
-

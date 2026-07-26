@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from ssldet.main_cli import build_parser
 from ssldet.workflow import launch_distributed_pretrain, make_dry_run_config
 
 
@@ -38,3 +39,21 @@ def test_distributed_launcher_writes_yaml_and_builds_torchrun_command(
     assert result.config_path.exists()
     assert "--nproc_per_node=2" in captured["command"]
     assert captured["check"] is False
+
+
+def test_video_cli_parses_numeric_webcam_source():
+    args = build_parser().parse_args(
+        [
+            "video",
+            "--source",
+            "0",
+            "--model",
+            "yolo26n",
+            "--weights",
+            "best.pt",
+            "--output",
+            "runs/video",
+        ]
+    )
+
+    assert args.source == 0

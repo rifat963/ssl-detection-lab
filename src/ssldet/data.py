@@ -11,7 +11,6 @@ from torchvision.transforms import v2
 
 from .config import PretrainConfig
 
-
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
@@ -52,8 +51,8 @@ def discover_images(roots: list[str], max_images: int | None, seed: int) -> list
     paths: list[Path] = []
     for raw_root in roots:
         root = Path(raw_root)
-        if not root.exists():
-            raise FileNotFoundError(f"Image root does not exist: {root}")
+        if not root.is_dir():
+            raise FileNotFoundError(f"Image root is not a directory or does not exist: {root}")
         paths.extend(
             path for path in root.rglob("*")
             if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS

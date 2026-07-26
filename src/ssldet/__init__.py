@@ -50,7 +50,7 @@ __all__ = [
     "transfer_ssl_backbone_to_yolo",
     "validate_dinov3_yolo26_support",
 ]
-__version__ = "0.8.0"
+__version__ = "0.8.1"
 
 
 def __getattr__(name: str):

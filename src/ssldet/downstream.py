@@ -67,6 +67,7 @@ def transfer_ssl_backbone_to_yolo(
         raise ValueError("output_file must differ from ssl_checkpoint")
 
     import torch
+
     from ultralytics import YOLO
 
     from .backbones import YOLOBackboneEncoder

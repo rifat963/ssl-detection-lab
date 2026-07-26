@@ -8,7 +8,6 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-
 DEFAULT_DINOV3_VITB16_WEIGHTS = (
     "/kaggle/input/datasets/mrifatrashid/dinov3-weigths/"
     "dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth"

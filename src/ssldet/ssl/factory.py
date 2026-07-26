@@ -7,9 +7,8 @@ from typing import Any
 
 import torch.nn as nn
 
-from ..methods import BYOL, DINOv2, DINOv3Distillation, IJEPA, MAE, MoCo, SimCLR
+from ..methods import BYOL, IJEPA, MAE, DINOv2, DINOv3Distillation, MoCo, SimCLR
 from ..methods.common import SSLMethod
-
 
 SSLFactory = Callable[..., SSLMethod]
 _SSL_MODULES: dict[str, SSLFactory] = {

@@ -13,7 +13,7 @@ evaluation, and interpretation.
 
 ## Current runtime baseline
 
-Version 0.7 uses the current accelerator-neutral PyTorch APIs and the recommended torchvision
+Version 0.8.1 uses the current accelerator-neutral PyTorch APIs and the recommended torchvision
 transforms v2 pipeline. Its tested dependency floor is Python 3.10+, PyTorch 2.4+,
 torchvision 0.19+, and Ultralytics 8.4.96+. On managed GPU platforms, keep the platform's
 CUDA-matched PyTorch build and upgrade this package plus Ultralytics; do not blindly replace

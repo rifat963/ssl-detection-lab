@@ -7,7 +7,6 @@ from PIL import Image
 
 from ssldet import build_dinov3_transform, load_dinov3_backbone
 
-
 WEIGHTS = Path("/path/to/dinov3_vitb16_pretrain_lvd1689m.pth")
 IMAGE = Path("/path/to/image.jpg")
 
