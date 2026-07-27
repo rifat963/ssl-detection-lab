@@ -39,7 +39,7 @@ result = analyze_video(VideoAnalysisConfig(
 | `confidence` | 0.25 | Higher than evaluation — these are operational detections |
 | `iou` | 0.7 | |
 | `image_size` | 640 | |
-| `tracker` | `"botsort.yaml"` | Or `"bytetrack.yaml"`, or `None` |
+| `tracker` | `"botsort.yaml"` | Any tracker below, a custom YAML path, or `None` |
 | `video_stride` | 1 | Analyse every Nth frame |
 | `max_frames` | `None` | Stop early |
 | `save_annotated` | `True` | Write the annotated video |
@@ -96,6 +96,77 @@ Track IDs come from the Ultralytics tracker. `unique_tracks` counts distinct IDs
 
 ID switches inflate `unique_tracks`. Without ground truth you cannot distinguish a genuine new
 object from a switch, which is exactly why MOTA/IDF1/HOTA are listed as unavailable.
+
+### Supported trackers
+
+```bash
+ssldet trackers            # human-readable
+ssldet trackers --json     # machine-readable
+```
+
+| Tracker | Association | ReID | Motion comp. | Pick it when |
+|---|---|:---:|:---:|---|
+| **botsort** *(default)* | IoU + optional ReID + GMC | ✅ | ✅ | Moving camera or frequent occlusion |
+| **bytetrack** | IoU over high- and low-confidence detections | ❌ | ❌ | Fastest; static camera, clear separation |
+| **ocsort** | Observation-centric IoU + velocity consistency | ❌ | ❌ | Nonlinear motion, no ReID budget |
+| **deepocsort** | Observation-centric IoU + appearance | ✅ | ✅ | Crowding where ID switches dominate |
+| **fasttrack** | ByteTrack-style IoU + occlusion-aware Kalman rollback | ❌ | ❌ | Heavy mutual occlusion at ByteTrack cost |
+| **tracktrack** | Multi-cue HMIoU + confidence + angle, iterative assignment | ✅ | ✅ | Best association when compute allows |
+
+Trackers are **not** trained by this package and are unaffected by SSL pretraining — they consume
+whatever your detector emits. A better backbone improves tracking only by improving detections.
+
+> **ReID is off by default** in every tracker that supports it (`with_reid: False`). Turning it on
+> costs an extra model and extra compute per frame. Enable it in a custom config, not by expecting
+> it silently.
+
+### Choosing and customizing
+
+An unknown tracker name is rejected by `.validate()`, before any weights load:
+
+```python
+VideoAnalysisConfig(..., tracker="bytrack.yaml").validate()
+# ValueError: Unknown tracker 'bytrack.yaml'; choose from ['botsort', 'bytetrack',
+# 'ocsort', 'deepocsort', 'fasttrack', 'tracktrack'], or pass the path to an
+# existing custom tracker YAML.
+```
+
+To tune thresholds, copy a config out of your installed Ultralytics and pass the local path.
+The files are Ultralytics AGPL-3.0 assets and are deliberately **not** vendored into this
+MIT-licensed package:
+
+```python
+import shutil
+from ultralytics.utils.checks import check_yaml
+
+shutil.copy(check_yaml("botsort.yaml"), "my_botsort.yaml")
+# edit track_buffer, match_thresh, with_reid, ...
+
+analyze_video(VideoAnalysisConfig(..., tracker="my_botsort.yaml").validate())
+```
+
+### Tracker settings are recorded
+
+`video_analysis.json` stores the **resolved** tracker configuration, not just the filename —
+`botsort.yaml` means different thresholds across Ultralytics versions, and a custom file is
+otherwise invisible to whoever reads the report later:
+
+```json
+"tracking": {
+  "enabled": true,
+  "tracker": "my_botsort.yaml",
+  "tracker_type": "botsort",
+  "catalog_name": "botsort",
+  "is_builtin": false,
+  "resolved": true,
+  "settings": { "track_buffer": 90, "match_thresh": 0.8, "with_reid": false, "...": "..." },
+  "unique_tracks": 47,
+  "track_length_sampled_frames": { "mean": 18.3, "...": "..." }
+}
+```
+
+If the config cannot be located, `resolved` is `false` and `settings` is empty — a reporting
+failure never discards an analysis that already succeeded.
 
 ## Next
 

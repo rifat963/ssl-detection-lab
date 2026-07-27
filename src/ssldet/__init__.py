@@ -10,7 +10,10 @@ from .catalog import (
     DINOV3_FEATURE_BACKBONES,
     MODEL_FAMILIES,
     SSL_ARCHITECTURES,
+    TRACKERS,
+    available_tracker_names,
     capabilities,
+    resolve_tracker,
 )
 
 __all__ = [
@@ -19,6 +22,9 @@ __all__ = [
     "DINOV3_FEATURE_BACKBONES",
     "MODEL_FAMILIES",
     "SSL_ARCHITECTURES",
+    "TRACKERS",
+    "available_tracker_names",
+    "resolve_tracker",
     "EvaluationConfig",
     "EvaluationResult",
     "DistributedPretrainResult",
@@ -50,7 +56,7 @@ __all__ = [
     "transfer_ssl_backbone_to_yolo",
     "validate_dinov3_yolo26_support",
 ]
-__version__ = "0.8.1"
+__version__ = "0.9.0"
 
 
 def __getattr__(name: str):

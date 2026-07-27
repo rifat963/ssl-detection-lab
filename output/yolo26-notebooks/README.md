@@ -28,6 +28,7 @@ analysis.
 - Kaggle **GPU T4 x2** with Internet enabled
 - The `iasadpanwhar/football-player-detection-yolov8` dataset attached via **Add Input**
 - `ssl-detection-lab` **0.8.1 or newer** — every notebook asserts this floor in its setup cell
+  (the [tracker lab](../tracker/) needs **0.9.0+** for the tracker catalog)
 - The DINOv3 notebooks additionally need PyTorch 2.7.1+ and user-supplied official Meta DINOv3
   weights, which carry their own separate DINOv3 License terms
 

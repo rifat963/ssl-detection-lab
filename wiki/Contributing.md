@@ -72,6 +72,17 @@ from ssldet.ssl import register_ssl_module
 register_ssl_module("mymethod", MyMethod)
 ```
 
+## Trackers
+
+`TRACKERS` in `catalog.py` mirrors the tracker configs shipped by Ultralytics. It is static data
+by design — the catalog must render before Ultralytics loads — so it can drift on upgrade.
+
+`tests/test_trackers.py::test_catalog_matches_the_installed_ultralytics_tracker_set` compares the
+catalog against `ultralytics/cfg/trackers/*.yaml` and fails when they diverge. If an Ultralytics
+bump breaks it, add the new tracker to `TRACKERS` with its association strategy, ReID and motion
+compensation flags, and paper link. Do **not** copy the YAML files into this repository — they are
+AGPL-3.0 Ultralytics assets and are resolved from the install at runtime.
+
 ## Adding a detection backend
 
 Implement the `ObjectDetector` protocol (`predict`, `track`, `validate`) and register it:
@@ -91,7 +102,7 @@ locally before you commit; a test that passes either way is not protecting anyth
 
 ## Notebook conventions
 
-- Live in `output/yolo26-notebooks/` or `output/yolo12-notebooks/`
+- Live in `output/yolo26-notebooks/`, `output/yolo12-notebooks/`, or `output/tracker/`
 - Assert the package version floor in the setup cell, and keep that floor current
 - Use official model spellings: `yolo26n.yaml`, `yolo12n.yaml` — never `yolov26`/`yolov12`
 - Edit the raw JSON surgically. A `json.load`/`json.dump` round-trip can reformat the whole file

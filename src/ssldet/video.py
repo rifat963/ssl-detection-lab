@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import csv
 import itertools
 import json
@@ -13,7 +14,9 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-from .catalog import resolve_model_family
+import yaml
+
+from .catalog import resolve_model_family, resolve_tracker
 from .evaluation import _load_model, _plain
 
 
@@ -54,6 +57,10 @@ class VideoAnalysisConfig:
         family = resolve_model_family(self.model_name)
         if not family.video_analysis:
             raise ValueError(f"{family.name} is not supported for video analysis")
+        if self.tracker and not Path(self.tracker).is_file():
+            # A custom tracker YAML is accepted as-is; anything else must name a built-in
+            # tracker, so a typo fails here instead of part-way through a long video.
+            resolve_tracker(self.tracker)
         return self
 
 
@@ -144,6 +151,51 @@ def _probe_local_video(source: str | int | Path) -> dict[str, Any]:
         return {}
 
 
+def _tracker_config_path(tracker: str) -> Path:
+    """Locate the tracker YAML the way Ultralytics will locate it at track time."""
+
+    from ultralytics.utils.checks import check_yaml
+
+    return Path(check_yaml(str(tracker)))
+
+
+def _tracker_settings(tracker: str | None) -> dict[str, Any]:
+    """Resolve the effective tracker YAML so a tracked run is reproducible from its report.
+
+    Recording only the filename is not enough: ``botsort.yaml`` means different thresholds
+    across Ultralytics versions, and a custom file is invisible to anyone reading the
+    report later. Resolution failures degrade to ``resolved: false`` rather than
+    discarding an analysis that already succeeded.
+    """
+
+    if not tracker:
+        return {"enabled": False, "tracker": None, "resolved": False, "settings": {}}
+
+    catalog_name = None
+    with contextlib.suppress(ValueError):
+        catalog_name = resolve_tracker(tracker).name
+
+    settings: dict[str, Any] = {}
+    resolved = False
+    try:
+        loaded = yaml.safe_load(_tracker_config_path(tracker).read_text(encoding="utf-8"))
+        if isinstance(loaded, dict):
+            settings = _plain(loaded)
+            resolved = True
+    except (ImportError, OSError, ValueError, AssertionError, yaml.YAMLError):
+        pass
+
+    return {
+        "enabled": True,
+        "tracker": str(tracker),
+        "tracker_type": settings.get("tracker_type", catalog_name),
+        "catalog_name": catalog_name,
+        "is_builtin": catalog_name is not None,
+        "resolved": resolved,
+        "settings": settings,
+    }
+
+
 def _detection_container(result: Any):
     boxes = getattr(result, "boxes", None)
     if boxes is not None:
@@ -174,6 +226,11 @@ def _make_outcome(report: dict[str, Any]) -> str:
             else "- Mean inference latency: n/a"
         ),
         f"- End-to-end processing throughput: **{overall['processing_fps']:.2f} FPS**",
+        (
+            f"- Tracker: **{overall['tracking']['tracker']}**"
+            if overall["tracking"]["enabled"]
+            else "- Tracker: **disabled** (detection only)"
+        ),
         f"- Unique tracks: **{overall['tracking']['unique_tracks']}**",
         "",
         "## Per-class outcome",
@@ -427,8 +484,7 @@ def analyze_video(config: VideoAnalysisConfig) -> VideoAnalysisResult:
                 else None
             ),
             "tracking": {
-                "enabled": bool(config.tracker),
-                "tracker": config.tracker,
+                **_tracker_settings(config.tracker),
                 "unique_tracks": len(track_lengths),
                 "track_length_sampled_frames": _stats(track_length_values),
             },

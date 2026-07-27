@@ -83,7 +83,7 @@ link pointing into it:
 grep -rEo "\]\([^)#][^)]*\)" wiki/ README.md
 ```
 
-Version-specific claims (dependency floors, `0.8.1`, PyTorch 2.7.1 for DINOv3) live in
+Version-specific claims (dependency floors, `0.9.0`, PyTorch 2.7.1 for DINOv3) live in
 [Installation](Installation.md) and the README baseline section. Change them in those two places
 only, and do not restate them elsewhere.
 

@@ -8,7 +8,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.4%2B-ee4c2c.svg)](https://pytorch.org/)
 [![Ultralytics](https://img.shields.io/badge/Ultralytics-8.4.96%2B-0b6efd.svg)](https://docs.ultralytics.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.1-informational.svg)](pyproject.toml)
+[![Version](https://img.shields.io/badge/version-0.9.0-informational.svg)](pyproject.toml)
 
 SimCLR · BYOL · MoCo · DINOv2 · DINOv3 · MAE · I-JEPA
 
@@ -52,6 +52,7 @@ SimCLR · BYOL · MoCo · DINOv2 · DINOv3 · MAE · I-JEPA
 - [2 · Transfer into a detector](#2--transfer-into-a-detector)
 - [3 · Evaluate on labelled data](#3--evaluate-on-labelled-data)
 - [4 · Analyse a video](#4--analyse-a-video)
+- [Trackers](#trackers)
 - [Reusable components](#reusable-components)
 - [DINOv2 and DINOv3 feature backbones](#dinov2-and-dinov3-feature-backbones)
 
@@ -128,7 +129,8 @@ Full details: [wiki/Installation](wiki/Installation.md)
 
 ```bash
 ssldet doctor     # Python, package floors, CUDA, cuDNN, every visible GPU
-ssldet models     # supported SSL objectives and model families
+ssldet models     # supported SSL objectives, model families, and trackers
+ssldet trackers   # supported multi-object trackers
 ```
 
 `ssldet doctor` never crashes — a broken CUDA driver is reported as a field, not an exception, so
@@ -209,7 +211,7 @@ Labs 1–2, 3–4, 5–6, and 7–8 are **pretrain → downstream pairs**. Lab 9
 | 6 | **I-JEPA → YOLO26 downstream** | [Open](https://www.kaggle.com/code/rifat963/cse-445-ijepa-yolo26-downstream-tutorial) | [notebook](output/yolo26-notebooks/ijepa_yolo26_downstream_tutorial.ipynb) |
 | 7 | **DINOv3-guided distillation** — frozen-teacher feature distillation | [Open](https://www.kaggle.com/code/rifat963/cse-445-dinov3-yolo26-football-ssl-tutorial) | [notebook](output/yolo26-notebooks/dinov3_yolo26_football_ssl_tutorial.ipynb) |
 | 8 | **DINOv3 → YOLO26 downstream** | [Open](https://www.kaggle.com/code/rifat963/cse445-dinov3-yolo26-downstream-tutorial) | [notebook](output/yolo26-notebooks/dinov3_yolo26_downstream_tutorial.ipynb) |
-| 9 | **Data association and multi-object tracking** | [Open](https://www.kaggle.com/code/rifat963/cse445-data-association-ultralytics-trackers) | — Kaggle only |
+| 9 | **Data association and multi-object tracking** | [Open](https://www.kaggle.com/code/rifat963/cse445-data-association-ultralytics-trackers) | [notebook](output/tracker/tracker_data_association_tutorial.ipynb) |
 
 ### The YOLO12 notebook set
 
@@ -223,6 +225,14 @@ backbone, with one self-contained pretrain → transfer notebook per objective:
 [DINOv3](output/yolo12-notebooks/dinov3_yolo12_football_ssl_tutorial.ipynb) ·
 [MAE](output/yolo12-notebooks/mae_yolo12_football_ssl_tutorial.ipynb) ·
 [I-JEPA](output/yolo12-notebooks/ijepa_yolo12_football_ssl_tutorial.ipynb)
+
+### The tracker lab
+
+[`output/tracker/`](output/tracker/) holds the standalone
+[data-association lab](output/tracker/tracker_data_association_tutorial.ipynb): it runs **all six
+trackers** over identical frames with identical detections, so every difference is attributable
+to the association algorithm alone, then analyses track lifetimes and tuning. It needs
+`ssl-detection-lab` 0.9.0+ and a fine-tuned detector; no SSL checkpoint required.
 
 ### The all-in-one lab notebook
 
@@ -249,8 +259,8 @@ GitHub. It contains no embedded wheel or Base64 package data.
   I-JEPA, and DINOv3 downstream labs follow the same structure.
 - **The DINOv3 SSL lab** performs label-free frozen-teacher feature distillation into YOLO26. It
   does not claim to reproduce the official DINOv3 pretraining recipe.
-- **The tracker lab** covers the Ultralytics tracker configurations (BoT-SORT, ByteTrack) and the
-  data-association step that links detections into tracks across frames.
+- **The tracker lab** covers the Ultralytics tracker configurations and the data-association step
+  that links detections into tracks across frames. See [Trackers](#trackers) for all six.
 
 </details>
 
@@ -539,9 +549,36 @@ ssldet video \
 ```
 
 The source may be a local file, direct HTTP URL, RTSP stream, webcam index, or any video-service
-URL the installed Ultralytics supports. Use `--tracker bytetrack.yaml` to switch trackers,
-`--tracker none` for detection only, `--stride 2` to sample every second frame, or
-`--max-frames 500` for a bounded run.
+URL the installed Ultralytics supports. Use `--tracker none` for detection only, `--stride 2` to
+sample every second frame, or `--max-frames 500` for a bounded run.
+
+### Trackers
+
+All six Ultralytics trackers are supported and catalogued:
+
+```bash
+ssldet trackers          # human-readable
+ssldet trackers --json   # machine-readable
+```
+
+| Tracker | Association | ReID | Motion comp. | Pick it when |
+|---|---|:---:|:---:|---|
+| **botsort** *(default)* | IoU + optional ReID + GMC | ✅ | ✅ | Moving camera or frequent occlusion |
+| **bytetrack** | IoU over high/low-confidence detections | ❌ | ❌ | Fastest; static camera, clear separation |
+| **ocsort** | Observation-centric IoU + velocity | ❌ | ❌ | Nonlinear motion, no ReID budget |
+| **deepocsort** | Observation-centric IoU + appearance | ✅ | ✅ | Crowding where ID switches dominate |
+| **fasttrack** | ByteTrack-style IoU + occlusion rollback | ❌ | ❌ | Heavy mutual occlusion, ByteTrack cost |
+| **tracktrack** | Multi-cue HMIoU + confidence + angle | ✅ | ✅ | Best association when compute allows |
+
+An unknown tracker name is rejected by `.validate()` before any weights load, and
+`video_analysis.json` records the **resolved** tracker settings — not just the filename — so a
+tracked run stays reproducible across Ultralytics versions.
+
+> Trackers consume detector output and are **not** trained by this package. SSL pretraining
+> improves tracking only insofar as it improves detections. Tracker configs ship with Ultralytics
+> under AGPL-3.0 and are resolved from your install rather than vendored here.
+
+Details, ReID notes, and how to customize a config: [wiki/Video-Analysis](wiki/Video-Analysis.md#supported-trackers).
 
 ```python
 from ssldet import VideoAnalysisConfig, analyze_video
@@ -644,6 +681,7 @@ catalog["ssl_architectures"]
 catalog["dinov2_feature_backbones"]
 catalog["dinov3_feature_backbones"]
 catalog["object_detection_backends"]
+catalog["trackers"]
 ```
 
 The catalog is deliberately data-only, so a UI can render it before PyTorch or Ultralytics load.
@@ -853,7 +891,7 @@ per-class recall, training time, peak GPU memory, and inference latency.
 
 ## Runtime baseline
 
-Version 0.8.1 uses the current accelerator-neutral PyTorch APIs and the recommended torchvision
+Version 0.9.0 uses the current accelerator-neutral PyTorch APIs and the recommended torchvision
 transforms v2 pipeline.
 
 | Dependency | Floor |

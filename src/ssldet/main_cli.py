@@ -7,7 +7,7 @@ import json
 from dataclasses import asdict
 from typing import Any
 
-from .catalog import capabilities
+from .catalog import available_tracker_names, capabilities
 
 
 def _device(value: str) -> str | int:
@@ -51,6 +51,8 @@ def _catalog_text() -> str:
         lines.append(
             f"- {item['name']:25} | {item['open_source_license']:10} | {commercial}"
         )
+    lines.extend(["", "Multi-object trackers", ""])
+    lines.extend(_tracker_lines(catalog))
     lines.extend(
         [
             "",
@@ -59,6 +61,30 @@ def _catalog_text() -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def _tracker_lines(catalog: dict[str, list[dict]]) -> list[str]:
+    lines = []
+    for item in catalog["trackers"]:
+        extras = ", ".join(
+            label
+            for label, enabled in (
+                ("ReID", item["appearance_reid"]),
+                ("motion compensation", item["motion_compensation"]),
+            )
+            if enabled
+        )
+        lines.append(f"- {item['name']:11} | {item['config_file']:18} | {item['association']}")
+        lines.append(f"  {item['pick_it_when']}" + (f" Supports {extras}." if extras else ""))
+    lines.extend(
+        [
+            "",
+            "Trackers consume detector output and are not affected by SSL pretraining.",
+            "Tracking accuracy (MOTA, IDF1, HOTA) needs ground-truth identities and cannot",
+            "be computed from a plain video.",
+        ]
+    )
+    return lines
 
 
 def _add_common_model_arguments(parser: argparse.ArgumentParser) -> None:
@@ -88,6 +114,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("doctor", help="Show dependency, CUDA, and GPU compatibility")
 
+    trackers = subparsers.add_parser("trackers", help="Show supported multi-object trackers")
+    trackers.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+
     evaluate = subparsers.add_parser("evaluate", help="Evaluate weights on a labelled dataset")
     _add_common_model_arguments(evaluate)
     evaluate.add_argument("--data", required=True, help="Ultralytics dataset YAML")
@@ -106,7 +135,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Video path, webcam index, HTTP/RTSP link, or YouTube URL",
     )
     video.add_argument(
-        "--tracker", default="botsort.yaml", help="Tracker YAML; use 'none' to disable"
+        "--tracker",
+        default="botsort.yaml",
+        help=(
+            "Built-in tracker ("
+            + ", ".join(available_tracker_names())
+            + "), a custom tracker YAML path, or 'none' to disable tracking"
+        ),
     )
     video.add_argument("--stride", type=int, default=1, help="Analyse every Nth frame")
     video.add_argument("--max-frames", type=int, default=None)
@@ -137,6 +172,13 @@ def main() -> None:
     args = build_parser().parse_args()
     if args.command == "models":
         print(json.dumps(capabilities(), indent=2) if args.json else _catalog_text())
+        return
+    if args.command == "trackers":
+        catalog = capabilities()
+        if args.json:
+            print(json.dumps(catalog["trackers"], indent=2))
+        else:
+            print("\n".join(["Multi-object trackers", ""] + _tracker_lines(catalog)))
         return
     if args.command == "doctor":
         from .runtime import runtime_report

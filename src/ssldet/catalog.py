@@ -7,6 +7,7 @@ PyTorch or Ultralytics models.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -51,6 +52,19 @@ class DetectionBackend:
     open_source_license: str
     commercial_license_available: bool
     license_url: str
+
+
+@dataclass(frozen=True)
+class Tracker:
+    """One multi-object tracker shipped by Ultralytics for ``mode="track"``."""
+
+    name: str
+    config_file: str
+    association: str
+    appearance_reid: bool
+    motion_compensation: bool
+    paper_url: str
+    pick_it_when: str = ""
 
 
 SSL_ARCHITECTURES = (
@@ -141,6 +155,68 @@ DETECTION_BACKENDS = (
         "AGPL-3.0",
         True,
         "https://www.ultralytics.com/license",
+    ),
+)
+
+
+# Trackers consume detections; they are not trained by this package and are unaffected by
+# SSL pretraining. The configuration files themselves ship with Ultralytics under AGPL-3.0
+# and are deliberately not vendored here -- they are resolved from the install at runtime.
+TRACKERS = (
+    Tracker(
+        "botsort",
+        "botsort.yaml",
+        "IoU + optional ReID, with global motion compensation",
+        True,
+        True,
+        "https://arxiv.org/abs/2206.14651",
+        "Default. Moving camera or frequent occlusion.",
+    ),
+    Tracker(
+        "bytetrack",
+        "bytetrack.yaml",
+        "IoU over high- and low-confidence detections",
+        False,
+        False,
+        "https://arxiv.org/abs/2110.06864",
+        "Fastest and simplest; static camera, clear separation.",
+    ),
+    Tracker(
+        "ocsort",
+        "ocsort.yaml",
+        "Observation-centric IoU with velocity consistency",
+        False,
+        False,
+        "https://arxiv.org/abs/2203.14360",
+        "Nonlinear motion and short occlusions without ReID cost.",
+    ),
+    Tracker(
+        "deepocsort",
+        "deepocsort.yaml",
+        "Observation-centric IoU plus appearance embeddings",
+        True,
+        True,
+        "https://arxiv.org/abs/2302.11813",
+        "Crowded scenes where identity switches dominate the error.",
+    ),
+    Tracker(
+        "fasttrack",
+        "fasttrack.yaml",
+        "ByteTrack-style IoU with occlusion-aware Kalman rollback",
+        False,
+        False,
+        "https://arxiv.org/abs/2508.14370",
+        "Heavy mutual occlusion at ByteTrack-like cost.",
+    ),
+    Tracker(
+        "tracktrack",
+        "tracktrack.yaml",
+        "Multi-cue HMIoU, confidence, and angle with iterative assignment",
+        True,
+        True,
+        "https://openaccess.thecvf.com/content/CVPR2025/html/"
+        "Shim_Focusing_on_Tracks_for_Online_Multi-Object_Tracking_CVPR_2025_paper.html",
+        "Best association quality when the extra compute is acceptable.",
     ),
 )
 
@@ -279,6 +355,30 @@ def resolve_model_family(model_name: str) -> ModelFamily:
     return MODEL_FAMILIES[-1]
 
 
+def available_tracker_names() -> tuple[str, ...]:
+    """Return the built-in tracker names in catalog order."""
+
+    return tuple(tracker.name for tracker in TRACKERS)
+
+
+def resolve_tracker(tracker: str) -> Tracker:
+    """Resolve a tracker name or bundled config filename to its catalog entry.
+
+    Accepts ``"botsort"`` and ``"botsort.yaml"`` alike. Raises ``ValueError`` for an
+    unknown name so a typo fails during configuration rather than part-way through a
+    video. Custom local tracker files are handled by the caller, not here.
+    """
+
+    normalized = Path(str(tracker)).stem.lower().replace("-", "").replace("_", "").strip()
+    for item in TRACKERS:
+        if item.name == normalized:
+            return item
+    raise ValueError(
+        f"Unknown tracker {tracker!r}; choose from {list(available_tracker_names())}, "
+        "or pass the path to an existing custom tracker YAML."
+    )
+
+
 def capabilities() -> dict[str, list[dict]]:
     """Return a JSON-serializable catalog for CLIs, notebooks, and web UIs."""
 
@@ -288,4 +388,5 @@ def capabilities() -> dict[str, list[dict]]:
         "dinov2_feature_backbones": [asdict(item) for item in DINOV2_FEATURE_BACKBONES],
         "dinov3_feature_backbones": [asdict(item) for item in DINOV3_FEATURE_BACKBONES],
         "object_detection_backends": [asdict(item) for item in DETECTION_BACKENDS],
+        "trackers": [asdict(item) for item in TRACKERS],
     }
